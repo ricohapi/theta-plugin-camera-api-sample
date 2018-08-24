@@ -7,11 +7,9 @@ This sample plug-in shows the way of capturing image with Camera API for RICOH T
 ## Contents
 
 * [Terms of Service](#terms)
-* [Technical requirements for development](#requirements)
-* [Contents of the SDK](#contents)
+* [Development Environment](#requirements)
+* [Branches of GitHub](#branches)
 * [Getting Started](#started)
-* [Where to find the latest information](#information)
-* [Troubleshooting](#troubleshooting)
 * [Trademark Information](#trademark)
 
 <a name="terms"></a>
@@ -24,7 +22,7 @@ By using the RICOH THETA Plug-in SDK, you are agreeing to the above and the lice
 Copyright &copy; 2018 Ricoh Company, Ltd.
 
 <a name="requirements"></a>
-### Development Environment
+## Development Environment
 
 This sample plug-in has been developed under the following conditions.
 
@@ -35,10 +33,8 @@ This sample plug-in has been developed under the following conditions.
 
     > Information on checking and updating the firmware is [here](https://theta360.com/en/support/manual/v/content/pc/pc_09.html).
 
-#### Operating System
-
-* Windows 10 Version 1709
-* macOS High Sierra ver.10.13
+#### RICOH THETA Plug-in SDK
+* Version: 1.0.1
 
 #### Development Software
 
@@ -50,19 +46,28 @@ This sample plug-in has been developed under the following conditions.
 * minSdkVersion 25
 * targetSdkVersion 25
 
+#### Operating System
+
+* Windows 10 Version 1709
+* macOS High Sierra ver.10.13
+
+<a name="branches"></a>
+## Branches of GitHub
+There are two branches on GitHub. One is master branch for still capture and the other is video branch for video recording.
+
 <a name="started"></a>
 ## Getting Started
 
 0. Open Vysor chrome app to see desktop of the camera.
-1. Initial setting
-    At the 1st time to use this app after install, app need to be taken permissions to use camera and storage.
+1. Initial setting for debugging
+
+    At the first time to use this app, app need to be taken permissions to use camera and storage.
     Settings → Apps → PluginSample → Permissions →
       “Camera” and “Storage” to be checked (turn ON).
-    (We are considering to remove this process for publication.)
+
 2. Boot PluginSample app
     (Ignore button on GUI)
-3. Press shutter button
-    (No sounds, but captured.)
+3. Press shutter button to take a photo/video
 4. Get and check JPEG by adb
     "adb pull /sdcard/DCIM/plugin.jpg"
 
