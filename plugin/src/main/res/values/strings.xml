@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">CameraAPI Sample for Still</string>
+    <string name="app_name">CameraAPI Capture Plugin</string>
     <string name="action_settings">Settings</string>
 </resources>

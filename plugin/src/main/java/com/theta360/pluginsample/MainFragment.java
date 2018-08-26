@@ -16,17 +16,30 @@
 
 package com.theta360.pluginsample;
 
+import android.content.Context;
+import android.content.Intent;
 import android.hardware.Camera;
+import android.media.AudioManager;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.FileObserver;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
+
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import static java.lang.System.currentTimeMillis;
 
 /**
  * MainFragment
@@ -38,7 +51,64 @@ public class MainFragment extends Fragment {
     private Camera.Parameters mParameters;
     private Camera.CameraInfo mCameraInfo;
 
+    private AudioManager mAudioManager;//for video
+    private MediaRecorder mMediaRecorder;//for video
+
     private boolean isSurface = false;
+    private boolean isCapturing = false;
+    private File instanceRecordMP4;
+    private File instanceRecordWAV;
+
+    private final String fileDir = "/storage/emulated/0/DCIM/";
+
+    private MediaRecorder.OnErrorListener onErrorListener = new MediaRecorder.OnErrorListener() {
+        @Override
+        public void onError(MediaRecorder mediaRecorder, int what, int extra) {
+        }
+    };
+
+    private MediaRecorder.OnInfoListener onInfoListener = new MediaRecorder.OnInfoListener() {
+        @Override
+        public void onInfo(MediaRecorder mr, int what, int extra){
+        }
+    };
+
+    private FileObserver fileObserver = new FileObserver(fileDir) {
+        @Override
+        public void onEvent(int event, String path) {
+            switch( event ){
+                case FileObserver.OPEN:
+                    Log.d("debug","OPEN:" + path );
+                    break;
+                case FileObserver.CLOSE_NOWRITE:
+                    Log.d("debug","CLOSE:" + path);
+                    break;
+                case FileObserver.CREATE:
+                    Log.d("debug","CREATE:" + path);
+                    break;
+                case FileObserver.DELETE:
+                    Log.d("debug", "DELETE:" + path);
+                    break;
+                case FileObserver.CLOSE_WRITE:
+                    Log.d("debug", "CLOSE_WRITE:" + path);
+                    break;
+                case FileObserver.MODIFY:
+                    //Log.d("debug", "MODIFY:" + path);
+                    break;
+                default:
+                    Log.d("debug", "event:" + event + ", " + path);
+                    break;
+            }
+        }
+    };
+
+    public void startWatching(){
+        fileObserver.startWatching();
+    }
+
+    public void stopWatching(){
+        fileObserver.stopWatching();
+    }
 
     public MainFragment() {
     }
@@ -54,12 +124,15 @@ public class MainFragment extends Fragment {
         SurfaceView surfaceView = (SurfaceView) view.findViewById(R.id.surfaceView);
         mSurfaceHolder = surfaceView.getHolder();
         mSurfaceHolder.addCallback(mSurfaceHolderCallback);
+
+        mAudioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);//for video
     }
 
 
     @Override
     public void onStart() {
         super.onStart();
+//        startWatching(); // for debug
 
         if (isSurface) {
             open();
@@ -69,8 +142,9 @@ public class MainFragment extends Fragment {
 
     @Override
     public void onStop() {
-        close();
+//        stopWatching(); // for debug
 
+        close();
         super.onStop();
     }
 
@@ -94,14 +168,97 @@ public class MainFragment extends Fragment {
     };
 
     public void takePicture() {
-        mParameters.setPictureSize(5376, 2688);
-        mParameters.set("RIC_SHOOTING_MODE", "RicStillCaptureStd");
-        mParameters.set("RIC_EXPOSURE_MODE", "RicAutoExposureP");
-        mParameters.set("recording-hint", "false");
-        mParameters.setJpegThumbnailSize(320, 160);
-        mCamera.setParameters(mParameters);
+        if(!isCapturing) {
+            isCapturing = true;
 
-        mCamera.takePicture(onShutterCallback, null, onJpegPictureCallback);
+            mParameters.setPictureSize(5376, 2688);
+            mParameters.set("RIC_SHOOTING_MODE", "RicStillCaptureStd");
+            mParameters.set("RIC_EXPOSURE_MODE", "RicAutoExposureP");
+            mParameters.set("RIC_PROC_STITCHING", "RicDynamicStitchingAuto");
+            mParameters.set("recording-hint", "false");
+            mParameters.setJpegThumbnailSize(320, 160);
+            mCamera.setParameters(mParameters);
+
+            mCamera.takePicture(onShutterCallback, null, onJpegPictureCallback);
+            Log.d("debug","mCamera.takePicture()" );
+        }
+    }
+
+    public boolean isMediaRecorder() {
+        return mMediaRecorder == null;
+    }
+
+    public boolean takeVideo() {
+        boolean result = true;
+        if (mMediaRecorder == null) {
+            mAudioManager.setParameters("RicUseBFormat=true");
+            mAudioManager.setParameters("RicMicSelect=RicMicSelectAuto");
+            mAudioManager
+                    .setParameters("RicMicSurroundVolumeLevel=RicMicSurroundVolumeLevelNormal");
+
+            mParameters.set("RIC_PROC_STITCHING", "RicStaticStitching");
+            mParameters.set("RIC_SHOOTING_MODE", "RicMovieRecording4kEqui");
+
+            CamcorderProfile camcorderProfile = CamcorderProfile.get(mCameraId, 10013); // for 4K video
+
+            mParameters.set("video-size", "3840x1920");
+            mParameters.set("recording-hint", "true");
+
+            mCamera.setParameters(mParameters);
+
+            mMediaRecorder = new MediaRecorder();
+            mCamera.unlock();
+
+            mMediaRecorder.setCamera(mCamera);
+            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+            mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.UNPROCESSED);
+
+            camcorderProfile.videoCodec = MediaRecorder.VideoEncoder.H264;
+            camcorderProfile.audioCodec = MediaRecorder.AudioEncoder.AAC;
+            camcorderProfile.audioChannels = 1;
+
+            mMediaRecorder.setProfile(camcorderProfile);
+            mMediaRecorder.setVideoEncodingBitRate(56000000); // 56 Mbps
+            mMediaRecorder.setVideoFrameRate(30); // 30 fps
+            mMediaRecorder.setMaxDuration(1500000); // max: 25 min
+            mMediaRecorder.setMaxFileSize(20401094656L); // max: 19 GB
+
+            String videoFile = fileDir + "plugin" + getDateTime() + ".mp4";
+            String wavFile = fileDir + "plugin" + getDateTime() + ".wav";
+            String videoWavFile = String.format("%s,%s", videoFile, wavFile);
+            mMediaRecorder.setOutputFile(videoWavFile);
+            mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
+            mMediaRecorder.setOnErrorListener(onErrorListener);
+            mMediaRecorder.setOnInfoListener(onInfoListener);
+
+            try {
+                mMediaRecorder.prepare();
+                mMediaRecorder.start();
+                Log.d("debug","mMediaRecorder.start()" );
+
+                instanceRecordMP4 = new File(videoFile);
+                instanceRecordWAV = new File(wavFile);
+            } catch (IOException | RuntimeException e) {
+                e.printStackTrace();
+                result = false;
+            }
+        } else {
+            try {
+                mMediaRecorder.stop();
+                Log.d("debug","mMediaRecorder.stop()" );
+            } catch(RuntimeException e) {
+                // cancel recording
+                instanceRecordMP4.delete();
+                instanceRecordWAV.delete();
+                result = false;
+            } finally {
+                mMediaRecorder.reset();
+                mMediaRecorder.release();
+                mMediaRecorder = null;
+                mCamera.lock();
+            }
+        }
+        return result;
     }
 
     private void open() {
@@ -122,14 +279,6 @@ public class MainFragment extends Fragment {
             mCamera.setErrorCallback(mErrorCallback);
             mParameters = mCamera.getParameters();
 
-//            mParameters.set("RIC_EXPOSURE_MODE", 2);
-//            mParameters.set("RIC_WB_MODE", "auto");
-//            mParameters.set("RIC_MANUAL_EXPOSURE_ISO_REAR", 0);
-//            mParameters.set("RIC_MANUAL_EXPOSURE_ISO_FRONT", 0);
-//            mParameters.set("RIC_MANUAL_EXPOSURE_TIME_REAR", 0);
-//            mParameters.set("RIC_MANUAL_EXPOSURE_TIME_FRONT", 0);
-//            mParameters.set("exposure-compensation-step", 0);
-//            mParameters.set("RIC_WB_TEMPERATURE", 5000);
             mParameters.set("RIC_SHOOTING_MODE", "RicMonitoring");
             mCamera.setParameters(mParameters);
         }
@@ -151,8 +300,7 @@ public class MainFragment extends Fragment {
 
             try {
                 mCamera.setPreviewDisplay(surfaceHolder);
-                mParameters
-                        .setPreviewSize(1024, 512);
+                mParameters.setPreviewSize(1920, 960);
                 mCamera.setParameters(mParameters);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -182,7 +330,7 @@ public class MainFragment extends Fragment {
             mCamera.setParameters(mParameters);
             mCamera.stopPreview();
 
-            String fileUrl = "/storage/emulated/0/DCIM/plugin.jpg";
+            String fileUrl = fileDir + "plugin" + getDateTime() + ".jpg";
             try (FileOutputStream fileOutputStream = new FileOutputStream(fileUrl)) {
                 fileOutputStream.write(data);
             } catch (IOException e) {
@@ -190,6 +338,20 @@ public class MainFragment extends Fragment {
             }
 
             mCamera.startPreview();
+            isCapturing = false;
         }
     };
+
+    private String getDateTime(){
+        Date date = new Date( System.currentTimeMillis() );
+
+        String format = "yyyyMMddHHmmss";
+        SimpleDateFormat sdf = new SimpleDateFormat(format);
+        String text = sdf.format(date);
+        return text;
+    }
+
+    public boolean isCapturing() {
+        return isCapturing;
+    }
 }

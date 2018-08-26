@@ -1,4 +1,4 @@
-# THETA Plug-in Camera API sample
+# THETA Plug-in: CameraAPI Capture Plugin
 
 Version: 1.0.0
 
@@ -8,7 +8,7 @@ This sample plug-in shows the way of capturing image with Camera API for RICOH T
 
 * [Terms of Service](#terms)
 * [Development Environment](#requirements)
-* [Branches of GitHub](#branches)
+* [Specification of this plugin](#specification)
 * [Getting Started](#started)
 * [Trademark Information](#trademark)
 
@@ -51,9 +51,15 @@ This sample plug-in has been developed under the following conditions.
 * Windows 10 Version 1709
 * macOS High Sierra ver.10.13
 
-<a name="branches"></a>
-## Branches of GitHub
-There are two branches on GitHub. One is master branch for still capture and the other is video branch for video recording.
+<a name="specification"></a>
+## Specification of this plugin
+This plug-in capture still and video by using CameraAPI for RICOH THETA V.
+After capturing still or video, the JPEG or MP4+WAV file is stored in /sdcard/DCIM/ folder.
+The stored file name is "yyyyMMddHHmmss".jpg (.mp4 or .wav for video). "yyyyMMddHHmmss" is 20180123123456 when it is 12:34:56 Jan 23, 2018.
+WebAPI can not be used when Camera API is used.
+The .wav file includes 4ch spatial audio as a first-order ambisonics B-format.
+The .mp4 file includes 4K video and 1ch monaural audio.
+The metadata of the files (.mp4 and .jpg) which outputted by using CameraAPI will be missed than the case of using WebAPI. (We recommend to use WebAPI instead of CameraAPI.)
 
 <a name="started"></a>
 ## Getting Started
@@ -62,14 +68,14 @@ There are two branches on GitHub. One is master branch for still capture and the
 1. Initial setting for debugging
 
     At the first time to use this app, app need to be taken permissions to use camera and storage.
-    Settings → Apps → PluginSample → Permissions →
-      “Camera” and “Storage” to be checked (turn ON).
+    Settings → Apps → "CameraAPI Capture Plugin" → Permissions →
+      “Camera”, "Microphone" and “Storage” to be checked (turn ON).
 
-2. Boot PluginSample app
+2. Launch "CameraAPI Capture Plugin" app
     (Ignore button on GUI)
 3. Press shutter button to take a photo/video
-4. Get and check JPEG by adb
-    "adb pull /sdcard/DCIM/plugin.jpg"
+4. Pull JPEG/MP4/WAV by adb
+    "adb pull /sdcard/DCIM/yyyyMMddHHmmss.jpg" ("yyyyMMddHHmmss" is 20180123123456 when it is 12:34:56 Jan 23, 2018.)
 
 <a name="trademark"></a>
 ## Trademark Information

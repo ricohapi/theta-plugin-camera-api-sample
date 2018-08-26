@@ -24,12 +24,15 @@ import android.view.WindowManager;
 import com.theta360.pluginlibrary.activity.PluginActivity;
 import com.theta360.pluginlibrary.callback.KeyCallback;
 import com.theta360.pluginlibrary.receiver.KeyReceiver;
+import com.theta360.pluginlibrary.values.LedColor;
+import com.theta360.pluginlibrary.values.LedTarget;
 
 public class MainActivity extends PluginActivity {
+    private boolean isVideo = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        notificationCameraClose();
         setContentView(R.layout.activity_main);
 
         ActionBar actionBar = getSupportActionBar();
@@ -39,44 +42,106 @@ public class MainActivity extends PluginActivity {
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        isVideo = false;
+
         // Set a callback when a button operation event is acquired.
         setKeyCallback(new KeyCallback() {
             @Override
             public void onKeyDown(int keyCode, KeyEvent event) {
                 if (keyCode == KeyReceiver.KEYCODE_CAMERA) {
-                    takePicture();
+                    if(isVideo){
+                        if( !takeVideo() ) {
+                            // Cancel recording
+                            notificationAudioWarning();
+                        }
+                    }else {
+                        takePicture();
+                    }
                 }
             }
 
             @Override
             public void onKeyUp(int keyCode, KeyEvent event) {
+                if (keyCode == KeyReceiver.KEYCODE_MEDIA_RECORD) {
+                    Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
+                    if (fragment != null && fragment instanceof MainFragment) {
+                        if (((MainFragment) fragment).isMediaRecorder()) {
+                            // not recording video
+                            isVideo = !isVideo;
+                            updateLED();
+                        }
+                    }
+                }
             }
 
             @Override
             public void onKeyLongPress(int keyCode, KeyEvent event) {
-                Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-                if (fragment != null && fragment instanceof MainFragment) {
-                    ((MainFragment) fragment).close();
+                if (keyCode == KeyReceiver.KEYCODE_MEDIA_RECORD) {
+                    Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
+                    if (fragment != null && fragment instanceof MainFragment) {
+                        ((MainFragment) fragment).close();
+                        close();
+                    }
                 }
             }
         });
+
+        notificationWlanOff();
+        notificationCameraClose();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+
+        updateLED();
     }
 
     @Override
     protected void onPause() {
+        close();
         super.onPause();
     }
 
     private void takePicture() {
         Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
         if (fragment != null && fragment instanceof MainFragment) {
-            notificationAudioShutter();
-            ((MainFragment) fragment).takePicture();
+            if( !(((MainFragment) fragment).isCapturing()) ) {
+                notificationAudioShutter();
+                ((MainFragment) fragment).takePicture();
+            }
+        }
+    }
+
+    private boolean takeVideo() {
+        boolean result = true;
+        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
+        if (fragment != null && fragment instanceof MainFragment) {
+
+            if (((MainFragment) fragment).isMediaRecorder() ) {
+                if( !(((MainFragment) fragment).isCapturing())){
+                    notificationAudioMovStart();
+                    notificationLedBlink(LedTarget.LED7, LedColor.RED, 2000);
+                }
+                result = ((MainFragment) fragment).takeVideo();
+            } else {
+                result = ((MainFragment) fragment).takeVideo();
+                if( result ){
+                    notificationAudioMovStop();
+                }
+                notificationLedHide(LedTarget.LED7);
+            }
+        }
+        return result;
+    }
+
+    private void updateLED() {
+        if(isVideo) {
+            notificationLedHide(LedTarget.LED4);
+            notificationLedShow(LedTarget.LED5);
+        }else{
+            notificationLedHide(LedTarget.LED5);
+            notificationLedShow(LedTarget.LED4);
         }
     }
 }
