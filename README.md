@@ -53,13 +53,13 @@ This sample plug-in has been developed under the following conditions.
 
 <a name="specification"></a>
 ## Specification of this plugin
-This plug-in capture still and video by using CameraAPI for RICOH THETA V.
-After capturing still or video, the JPEG or MP4+WAV file is stored in /sdcard/DCIM/ folder.
-The stored file name is "yyyyMMddHHmmss".jpg (.mp4 or .wav for video). "yyyyMMddHHmmss" is 20180123123456 when it is 12:34:56 Jan 23, 2018.
-WebAPI can not be used when Camera API is used.
-The .wav file includes 4ch spatial audio as a first-order ambisonics B-format.
-The .mp4 file includes 4K video and 1ch monaural audio.
-The metadata of the files (.mp4 and .jpg) which outputted by using CameraAPI will be missed than the case of using WebAPI. (We recommend to use WebAPI instead of CameraAPI.)
+* This plug-in capture still and video by using CameraAPI for RICOH THETA V. This plug-in has been made as an example to show the way of using Camera API for RICOH THETA V.
+* After capturing still or video, the JPEG or MP4+WAV file is stored in /sdcard/DCIM/ folder.
+* The stored file name is "yyyyMMddHHmmss".jpg (.mp4 or .wav for video). "yyyyMMddHHmmss" is 20180123123456 when it is 12:34:56 Jan 23, 2018.
+* WebAPI can not be used when Camera API is used.
+* The .wav file includes 4ch spatial audio as a first-order ambisonics B-format.
+* The .mp4 file includes 4K video and 1ch monaural audio.
+* The metadata of the files (.mp4 and .jpg) which outputted by using CameraAPI will be missed than the case of using WebAPI. (We recommend to use WebAPI instead of CameraAPI.)
 
 <a name="started"></a>
 ## Getting Started
