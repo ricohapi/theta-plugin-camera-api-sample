@@ -73,6 +73,25 @@ public class MainFragment extends Fragment {
         }
     };
 
+    private SurfaceHolder.Callback mSurfaceHolderCallback = new SurfaceHolder.Callback() {
+        @Override
+        public void surfaceCreated(SurfaceHolder surfaceHolder) {
+            isSurface = true;
+            open();
+        }
+
+        @Override
+        public void surfaceChanged(SurfaceHolder surfaceHolder, int format, int width, int height) {
+            setSurface(surfaceHolder);
+        }
+
+        @Override
+        public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+            isSurface = false;
+            close();
+        }
+    };
+
     private FileObserver fileObserver = new FileObserver(fileDir) {
         @Override
         public void onEvent(int event, String path) {
@@ -102,20 +121,12 @@ public class MainFragment extends Fragment {
         }
     };
 
-    public void startWatching(){
-        fileObserver.startWatching();
-    }
-
-    public void stopWatching(){
-        fileObserver.stopWatching();
-    }
-
     public MainFragment() {
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
-            Bundle savedInstanceState) {
+                             Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_main, container, false);
     }
 
@@ -127,7 +138,6 @@ public class MainFragment extends Fragment {
 
         mAudioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);//for video
     }
-
 
     @Override
     public void onStart() {
@@ -148,24 +158,13 @@ public class MainFragment extends Fragment {
         super.onStop();
     }
 
-    private SurfaceHolder.Callback mSurfaceHolderCallback = new SurfaceHolder.Callback() {
-        @Override
-        public void surfaceCreated(SurfaceHolder surfaceHolder) {
-            isSurface = true;
-            open();
-        }
+    public void startWatching(){
+        fileObserver.startWatching();
+    }
 
-        @Override
-        public void surfaceChanged(SurfaceHolder surfaceHolder, int format, int width, int height) {
-            setSurface(surfaceHolder);
-        }
-
-        @Override
-        public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-            isSurface = false;
-            close();
-        }
-    };
+    public void stopWatching(){
+        fileObserver.stopWatching();
+    }
 
     public void takePicture() {
         if(!isCapturing) {
@@ -261,6 +260,10 @@ public class MainFragment extends Fragment {
         return result;
     }
 
+    public boolean isCapturing() {
+        return isCapturing;
+    }
+
     private void open() {
         if (mCamera == null) {
             int numberOfCameras = Camera.getNumberOfCameras();
@@ -284,7 +287,7 @@ public class MainFragment extends Fragment {
         }
     }
 
-    public void close() {
+    private void close() {
         if (mCamera != null) {
             mCamera.stopPreview();
             mCamera.setPreviewCallback(null);
@@ -349,9 +352,5 @@ public class MainFragment extends Fragment {
         SimpleDateFormat sdf = new SimpleDateFormat(format);
         String text = sdf.format(date);
         return text;
-    }
-
-    public boolean isCapturing() {
-        return isCapturing;
     }
 }

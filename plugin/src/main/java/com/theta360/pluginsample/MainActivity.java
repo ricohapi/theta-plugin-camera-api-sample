@@ -29,6 +29,7 @@ import com.theta360.pluginlibrary.values.LedTarget;
 
 public class MainActivity extends PluginActivity {
     private boolean isVideo = false;
+    private boolean isEnded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,18 +44,19 @@ public class MainActivity extends PluginActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         isVideo = false;
+        isEnded = false;
 
         // Set a callback when a button operation event is acquired.
         setKeyCallback(new KeyCallback() {
             @Override
             public void onKeyDown(int keyCode, KeyEvent event) {
                 if (keyCode == KeyReceiver.KEYCODE_CAMERA) {
-                    if(isVideo){
-                        if( !takeVideo() ) {
+                    if (isVideo) {
+                        if (!takeVideo()) {
                             // Cancel recording
                             notificationAudioWarning();
                         }
-                    }else {
+                    } else {
                         takePicture();
                     }
                 }
@@ -77,11 +79,7 @@ public class MainActivity extends PluginActivity {
             @Override
             public void onKeyLongPress(int keyCode, KeyEvent event) {
                 if (keyCode == KeyReceiver.KEYCODE_MEDIA_RECORD) {
-                    Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-                    if (fragment != null && fragment instanceof MainFragment) {
-                        ((MainFragment) fragment).close();
-                        close();
-                    }
+                    endProcess();
                 }
             }
         });
@@ -99,14 +97,14 @@ public class MainActivity extends PluginActivity {
 
     @Override
     protected void onPause() {
-        close();
+        endProcess();
         super.onPause();
     }
 
     private void takePicture() {
         Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
         if (fragment != null && fragment instanceof MainFragment) {
-            if( !(((MainFragment) fragment).isCapturing()) ) {
+            if (!(((MainFragment) fragment).isCapturing())) {
                 notificationAudioShutter();
                 ((MainFragment) fragment).takePicture();
             }
@@ -118,15 +116,17 @@ public class MainActivity extends PluginActivity {
         Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
         if (fragment != null && fragment instanceof MainFragment) {
 
-            if (((MainFragment) fragment).isMediaRecorder() ) {
-                if( !(((MainFragment) fragment).isCapturing())){
+            if (((MainFragment) fragment).isMediaRecorder()) {
+                // start recording
+                if (!(((MainFragment) fragment).isCapturing())) {
                     notificationAudioMovStart();
                     notificationLedBlink(LedTarget.LED7, LedColor.RED, 2000);
                 }
                 result = ((MainFragment) fragment).takeVideo();
             } else {
+                // stop recording
                 result = ((MainFragment) fragment).takeVideo();
-                if( result ){
+                if (result) {
                     notificationAudioMovStop();
                 }
                 notificationLedHide(LedTarget.LED7);
@@ -136,12 +136,25 @@ public class MainActivity extends PluginActivity {
     }
 
     private void updateLED() {
-        if(isVideo) {
+        if (isVideo) {
             notificationLedHide(LedTarget.LED4);
             notificationLedShow(LedTarget.LED5);
-        }else{
+        } else {
             notificationLedHide(LedTarget.LED5);
             notificationLedShow(LedTarget.LED4);
+        }
+    }
+
+    private void endProcess() {
+        if(!isEnded) {
+            Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
+            if (fragment != null && fragment instanceof MainFragment) {
+                if (!((MainFragment) fragment).isMediaRecorder()) {
+                    takeVideo(); // stop recording
+                }
+            }
+            close();
+            isEnded = true;
         }
     }
 }
