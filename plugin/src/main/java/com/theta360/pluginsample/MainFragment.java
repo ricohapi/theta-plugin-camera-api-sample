@@ -17,12 +17,12 @@
 package com.theta360.pluginsample;
 
 import android.content.Context;
-import android.content.Intent;
 import android.hardware.Camera;
 import android.media.AudioManager;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.FileObserver;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
@@ -32,47 +32,46 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import static java.lang.System.currentTimeMillis;
-
 /**
  * MainFragment
  */
 public class MainFragment extends Fragment {
+    public static final String DCIM = Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_DCIM).getPath();
     private SurfaceHolder mSurfaceHolder;
     private Camera mCamera;
     private int mCameraId;
     private Camera.Parameters mParameters;
     private Camera.CameraInfo mCameraInfo;
-
+    private Callback mCallback;
     private AudioManager mAudioManager;//for video
     private MediaRecorder mMediaRecorder;//for video
-
     private boolean isSurface = false;
     private boolean isCapturing = false;
     private File instanceRecordMP4;
     private File instanceRecordWAV;
-
-    private final String fileDir = "/storage/emulated/0/DCIM/";
-
+    private MediaRecorder.OnInfoListener onInfoListener = new MediaRecorder.OnInfoListener() {
+        @Override
+        public void onInfo(MediaRecorder mr, int what, int extra) {
+        }
+    };
     private MediaRecorder.OnErrorListener onErrorListener = new MediaRecorder.OnErrorListener() {
         @Override
         public void onError(MediaRecorder mediaRecorder, int what, int extra) {
         }
     };
-
-    private MediaRecorder.OnInfoListener onInfoListener = new MediaRecorder.OnInfoListener() {
+    private Camera.ErrorCallback mErrorCallback = new Camera.ErrorCallback() {
         @Override
-        public void onInfo(MediaRecorder mr, int what, int extra){
+        public void onError(int error, Camera camera) {
+
         }
     };
-
     private SurfaceHolder.Callback mSurfaceHolderCallback = new SurfaceHolder.Callback() {
         @Override
         public void surfaceCreated(SurfaceHolder surfaceHolder) {
@@ -91,19 +90,42 @@ public class MainFragment extends Fragment {
             close();
         }
     };
+    private Camera.ShutterCallback onShutterCallback = new Camera.ShutterCallback() {
+        @Override
+        public void onShutter() {
+            mCallback.onShutter();
+        }
+    };
+    private Camera.PictureCallback onJpegPictureCallback = new Camera.PictureCallback() {
+        @Override
+        public void onPictureTaken(byte[] data, Camera camera) {
+            mParameters.set("RIC_PROC_STITCHING", "RicStaticStitching");
+            mCamera.setParameters(mParameters);
+            mCamera.stopPreview();
 
-    private FileObserver fileObserver = new FileObserver(fileDir) {
+            String fileUrl = String.format("%s/plugin_%s.jpg", DCIM, getDateTime());
+            try (FileOutputStream fileOutputStream = new FileOutputStream(fileUrl)) {
+                fileOutputStream.write(data);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            mCamera.startPreview();
+            isCapturing = false;
+        }
+    };
+    private FileObserver fileObserver = new FileObserver(DCIM) {
         @Override
         public void onEvent(int event, String path) {
-            switch( event ){
+            switch (event) {
                 case FileObserver.OPEN:
-                    Log.d("debug","OPEN:" + path );
+                    Log.d("debug", "OPEN:" + path);
                     break;
                 case FileObserver.CLOSE_NOWRITE:
-                    Log.d("debug","CLOSE:" + path);
+                    Log.d("debug", "CLOSE:" + path);
                     break;
                 case FileObserver.CREATE:
-                    Log.d("debug","CREATE:" + path);
+                    Log.d("debug", "CREATE:" + path);
                     break;
                 case FileObserver.DELETE:
                     Log.d("debug", "DELETE:" + path);
@@ -126,7 +148,7 @@ public class MainFragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+            Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_main, container, false);
     }
 
@@ -136,7 +158,17 @@ public class MainFragment extends Fragment {
         mSurfaceHolder = surfaceView.getHolder();
         mSurfaceHolder.addCallback(mSurfaceHolderCallback);
 
-        mAudioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);//for video
+        mAudioManager = (AudioManager) getContext()
+                .getSystemService(Context.AUDIO_SERVICE);//for video
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+
+        if (context instanceof Callback) {
+            mCallback = (Callback) context;
+        }
     }
 
     @Override
@@ -158,16 +190,23 @@ public class MainFragment extends Fragment {
         super.onStop();
     }
 
-    public void startWatching(){
+    @Override
+    public void onDetach() {
+        super.onDetach();
+
+        mCallback = null;
+    }
+
+    public void startWatching() {
         fileObserver.startWatching();
     }
 
-    public void stopWatching(){
+    public void stopWatching() {
         fileObserver.stopWatching();
     }
 
     public void takePicture() {
-        if(!isCapturing) {
+        if (!isCapturing) {
             isCapturing = true;
 
             mParameters.setPictureSize(5376, 2688);
@@ -179,7 +218,7 @@ public class MainFragment extends Fragment {
             mCamera.setParameters(mParameters);
 
             mCamera.takePicture(onShutterCallback, null, onJpegPictureCallback);
-            Log.d("debug","mCamera.takePicture()" );
+            Log.d("debug", "mCamera.takePicture()");
         }
     }
 
@@ -198,7 +237,8 @@ public class MainFragment extends Fragment {
             mParameters.set("RIC_PROC_STITCHING", "RicStaticStitching");
             mParameters.set("RIC_SHOOTING_MODE", "RicMovieRecording4kEqui");
 
-            CamcorderProfile camcorderProfile = CamcorderProfile.get(mCameraId, 10013); // for 4K video
+            // for 4K video
+            CamcorderProfile camcorderProfile = CamcorderProfile.get(mCameraId, 10013);
 
             mParameters.set("video-size", "3840x1920");
             mParameters.set("recording-hint", "true");
@@ -222,8 +262,8 @@ public class MainFragment extends Fragment {
             mMediaRecorder.setMaxDuration(1500000); // max: 25 min
             mMediaRecorder.setMaxFileSize(20401094656L); // max: 19 GB
 
-            String videoFile = fileDir + "plugin" + getDateTime() + ".mp4";
-            String wavFile = fileDir + "plugin" + getDateTime() + ".wav";
+            String videoFile = String.format("%s/plugin_%s.mp4", DCIM, getDateTime());
+            String wavFile = String.format("%s/plugin_%s.wav", DCIM, getDateTime());
             String videoWavFile = String.format("%s,%s", videoFile, wavFile);
             mMediaRecorder.setOutputFile(videoWavFile);
             mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
@@ -233,28 +273,26 @@ public class MainFragment extends Fragment {
             try {
                 mMediaRecorder.prepare();
                 mMediaRecorder.start();
-                Log.d("debug","mMediaRecorder.start()" );
+                Log.d("debug", "mMediaRecorder.start()");
 
                 instanceRecordMP4 = new File(videoFile);
                 instanceRecordWAV = new File(wavFile);
             } catch (IOException | RuntimeException e) {
                 e.printStackTrace();
+                stopMediaRecorder();
                 result = false;
             }
         } else {
             try {
                 mMediaRecorder.stop();
-                Log.d("debug","mMediaRecorder.stop()" );
-            } catch(RuntimeException e) {
+                Log.d("debug", "mMediaRecorder.stop()");
+            } catch (RuntimeException e) {
                 // cancel recording
                 instanceRecordMP4.delete();
                 instanceRecordWAV.delete();
                 result = false;
             } finally {
-                mMediaRecorder.reset();
-                mMediaRecorder.release();
-                mMediaRecorder = null;
-                mCamera.lock();
+                stopMediaRecorder();
             }
         }
         return result;
@@ -288,12 +326,27 @@ public class MainFragment extends Fragment {
     }
 
     private void close() {
+        stopMediaRecorder();
         if (mCamera != null) {
             mCamera.stopPreview();
             mCamera.setPreviewCallback(null);
             mCamera.setErrorCallback(null);
             mCamera.release();
             mCamera = null;
+        }
+    }
+
+    private void stopMediaRecorder() {
+        if (mMediaRecorder != null) {
+            try {
+                mMediaRecorder.stop();
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+            }
+            mMediaRecorder.reset();
+            mMediaRecorder.release();
+            mMediaRecorder = null;
+            mCamera.lock();
         }
     }
 
@@ -313,44 +366,16 @@ public class MainFragment extends Fragment {
         }
     }
 
-    private Camera.ErrorCallback mErrorCallback = new Camera.ErrorCallback() {
-        @Override
-        public void onError(int error, Camera camera) {
-
-        }
-    };
-
-    private Camera.ShutterCallback onShutterCallback = new Camera.ShutterCallback() {
-        @Override
-        public void onShutter() {
-        }
-    };
-
-    private Camera.PictureCallback onJpegPictureCallback = new Camera.PictureCallback() {
-        @Override
-        public void onPictureTaken(byte[] data, Camera camera) {
-            mParameters.set("RIC_PROC_STITCHING", "RicStaticStitching");
-            mCamera.setParameters(mParameters);
-            mCamera.stopPreview();
-
-            String fileUrl = fileDir + "plugin" + getDateTime() + ".jpg";
-            try (FileOutputStream fileOutputStream = new FileOutputStream(fileUrl)) {
-                fileOutputStream.write(data);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            mCamera.startPreview();
-            isCapturing = false;
-        }
-    };
-
-    private String getDateTime(){
-        Date date = new Date( System.currentTimeMillis() );
+    private String getDateTime() {
+        Date date = new Date(System.currentTimeMillis());
 
         String format = "yyyyMMddHHmmss";
         SimpleDateFormat sdf = new SimpleDateFormat(format);
         String text = sdf.format(date);
         return text;
+    }
+
+    public interface Callback {
+        void onShutter();
     }
 }

@@ -27,7 +27,7 @@ import com.theta360.pluginlibrary.receiver.KeyReceiver;
 import com.theta360.pluginlibrary.values.LedColor;
 import com.theta360.pluginlibrary.values.LedTarget;
 
-public class MainActivity extends PluginActivity {
+public class MainActivity extends PluginActivity implements MainFragment.Callback {
     private boolean isVideo = false;
     private boolean isEnded = false;
 
@@ -42,9 +42,6 @@ public class MainActivity extends PluginActivity {
         }
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-        isVideo = false;
-        isEnded = false;
 
         // Set a callback when a button operation event is acquired.
         setKeyCallback(new KeyCallback() {
@@ -98,14 +95,19 @@ public class MainActivity extends PluginActivity {
     @Override
     protected void onPause() {
         endProcess();
+
         super.onPause();
+    }
+
+    @Override
+    public void onShutter() {
+        notificationAudioShutter();
     }
 
     private void takePicture() {
         Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
         if (fragment != null && fragment instanceof MainFragment) {
             if (!(((MainFragment) fragment).isCapturing())) {
-                notificationAudioShutter();
                 ((MainFragment) fragment).takePicture();
             }
         }
@@ -146,7 +148,7 @@ public class MainActivity extends PluginActivity {
     }
 
     private void endProcess() {
-        if(!isEnded) {
+        if (!isEnded) {
             Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
             if (fragment != null && fragment instanceof MainFragment) {
                 if (!((MainFragment) fragment).isMediaRecorder()) {
