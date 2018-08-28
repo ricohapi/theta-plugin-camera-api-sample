@@ -109,7 +109,6 @@ public abstract class PluginActivity extends AppCompatActivity {
                     @Override
                     public void onException(String message) {
                         notificationError(message);
-                        finish();
                     }
                 });
         Thread.setDefaultUncaughtExceptionHandler(uncaughtException);
@@ -318,7 +317,7 @@ public abstract class PluginActivity extends AppCompatActivity {
         intent.putExtra(EXIT_STATUS, ExitStatus.FAILURE.toString());
         intent.putExtra(MESSAGE, message);
         sendBroadcast(intent);
-        finish();
+        finishAndRemoveTask();
     }
 
     /**
