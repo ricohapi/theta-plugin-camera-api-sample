@@ -39,9 +39,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * MainFragment
+ * CameraFragment
  */
-public class MainFragment extends Fragment {
+public class CameraFragment extends Fragment {
     public static final String DCIM = Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DCIM).getPath();
     private SurfaceHolder mSurfaceHolder;
@@ -49,7 +49,7 @@ public class MainFragment extends Fragment {
     private int mCameraId;
     private Camera.Parameters mParameters;
     private Camera.CameraInfo mCameraInfo;
-    private Callback mCallback;
+    private CFCallback mCallback;
     private AudioManager mAudioManager;//for video
     private MediaRecorder mMediaRecorder;//for video
     private boolean isSurface = false;
@@ -143,7 +143,7 @@ public class MainFragment extends Fragment {
         }
     };
 
-    public MainFragment() {
+    public CameraFragment() {
     }
 
     @Override
@@ -166,8 +166,8 @@ public class MainFragment extends Fragment {
     public void onAttach(Context context) {
         super.onAttach(context);
 
-        if (context instanceof Callback) {
-            mCallback = (Callback) context;
+        if (context instanceof CFCallback) {
+            mCallback = (CFCallback) context;
         }
     }
 
@@ -375,7 +375,9 @@ public class MainFragment extends Fragment {
         return text;
     }
 
-    public interface Callback {
+    public interface CFCallback {
         void onShutter();
+
+        void onPictureTaken();
     }
 }

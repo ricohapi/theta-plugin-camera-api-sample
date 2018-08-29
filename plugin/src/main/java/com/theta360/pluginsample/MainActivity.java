@@ -27,7 +27,7 @@ import com.theta360.pluginlibrary.receiver.KeyReceiver;
 import com.theta360.pluginlibrary.values.LedColor;
 import com.theta360.pluginlibrary.values.LedTarget;
 
-public class MainActivity extends PluginActivity implements MainFragment.Callback {
+public class MainActivity extends PluginActivity implements CameraFragment.CFCallback {
     private boolean isVideo = false;
     private boolean isEnded = false;
 
@@ -63,8 +63,8 @@ public class MainActivity extends PluginActivity implements MainFragment.Callbac
             public void onKeyUp(int keyCode, KeyEvent event) {
                 if (keyCode == KeyReceiver.KEYCODE_MEDIA_RECORD) {
                     Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-                    if (fragment != null && fragment instanceof MainFragment) {
-                        if (((MainFragment) fragment).isMediaRecorder()) {
+                    if (fragment != null && fragment instanceof CameraFragment) {
+                        if (((CameraFragment) fragment).isMediaRecorder()) {
                             // not recording video
                             isVideo = !isVideo;
                             updateLED();
@@ -104,11 +104,16 @@ public class MainActivity extends PluginActivity implements MainFragment.Callbac
         notificationAudioShutter();
     }
 
+    @Override
+    public void onPictureTaken() {
+
+    }
+
     private void takePicture() {
         Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-        if (fragment != null && fragment instanceof MainFragment) {
-            if (!(((MainFragment) fragment).isCapturing())) {
-                ((MainFragment) fragment).takePicture();
+        if (fragment != null && fragment instanceof CameraFragment) {
+            if (!(((CameraFragment) fragment).isCapturing())) {
+                ((CameraFragment) fragment).takePicture();
             }
         }
     }
@@ -116,18 +121,18 @@ public class MainActivity extends PluginActivity implements MainFragment.Callbac
     private boolean takeVideo() {
         boolean result = true;
         Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-        if (fragment != null && fragment instanceof MainFragment) {
+        if (fragment != null && fragment instanceof CameraFragment) {
 
-            if (((MainFragment) fragment).isMediaRecorder()) {
+            if (((CameraFragment) fragment).isMediaRecorder()) {
                 // start recording
-                if (!(((MainFragment) fragment).isCapturing())) {
+                if (!(((CameraFragment) fragment).isCapturing())) {
                     notificationAudioMovStart();
                     notificationLedBlink(LedTarget.LED7, LedColor.RED, 2000);
                 }
-                result = ((MainFragment) fragment).takeVideo();
+                result = ((CameraFragment) fragment).takeVideo();
             } else {
                 // stop recording
-                result = ((MainFragment) fragment).takeVideo();
+                result = ((CameraFragment) fragment).takeVideo();
                 if (result) {
                     notificationAudioMovStop();
                 }
@@ -150,8 +155,8 @@ public class MainActivity extends PluginActivity implements MainFragment.Callbac
     private void endProcess() {
         if (!isEnded) {
             Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-            if (fragment != null && fragment instanceof MainFragment) {
-                if (!((MainFragment) fragment).isMediaRecorder()) {
+            if (fragment != null && fragment instanceof CameraFragment) {
+                if (!((CameraFragment) fragment).isMediaRecorder()) {
                     takeVideo(); // stop recording
                 }
             }
