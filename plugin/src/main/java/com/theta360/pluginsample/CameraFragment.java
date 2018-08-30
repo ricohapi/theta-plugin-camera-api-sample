@@ -230,13 +230,15 @@ public class CameraFragment extends Fragment {
         }
     }
 
-    public boolean isMediaRecorder() {
+    public boolean isMediaRecorderNull() {
         return mMediaRecorder == null;
     }
 
     public boolean takeVideo() {
         boolean result = true;
         if (mMediaRecorder == null) {
+            mMediaRecorder = new MediaRecorder();
+
             mAudioManager.setParameters("RicUseBFormat=true");
             mAudioManager.setParameters("RicMicSelect=RicMicSelectAuto");
             mAudioManager
@@ -253,7 +255,6 @@ public class CameraFragment extends Fragment {
 
             mCamera.setParameters(mParameters);
 
-            mMediaRecorder = new MediaRecorder();
             mCamera.unlock();
 
             mMediaRecorder.setCamera(mCamera);
