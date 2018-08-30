@@ -53,7 +53,7 @@ This sample plug-in has been developed under the following conditions.
 
 <a name="specification"></a>
 ## Specification of this plugin
-* This plug-in capture still and video by using CameraAPI for RICOH THETA V. This plug-in has been made as an example to show the way of using Camera API for RICOH THETA V.
+* This plug-in capture still and video by using [Camera API](https://api.ricoh/docs/theta-plugin-reference/camera-api/), [AudioManager API](https://api.ricoh/docs/theta-plugin-reference/audio-manager-api/) and [PluginLibrary](https://github.com/ricohapi/theta-plugin-sdk/tree/master/pluginlibrary) for RICOH THETA V. This plug-in has been made as an example to show the way of using Camera API for RICOH THETA V.
 * After capturing still or video, the JPEG or MP4+WAV file is stored in /sdcard/DCIM/ folder.
 * The stored file name is "yyyyMMddHHmmss".jpg (.mp4 or .wav for video). "yyyyMMddHHmmss" is 20180123123456 when it is 12:34:56 Jan 23, 2018.
 * WebAPI can not be used when Camera API is used.
