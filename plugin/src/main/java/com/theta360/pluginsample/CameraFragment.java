@@ -54,6 +54,7 @@ public class CameraFragment extends Fragment {
     private MediaRecorder mMediaRecorder;//for video
     private boolean isSurface = false;
     private boolean isCapturing = false;
+    private boolean isShutter = false;
     private File instanceRecordMP4;
     private File instanceRecordWAV;
     private MediaRecorder.OnInfoListener onInfoListener = new MediaRecorder.OnInfoListener() {
@@ -93,7 +94,11 @@ public class CameraFragment extends Fragment {
     private Camera.ShutterCallback onShutterCallback = new Camera.ShutterCallback() {
         @Override
         public void onShutter() {
-            mCallback.onShutter();
+            // ShutterCallback is called twice.
+            if (!isShutter) {
+                mCallback.onShutter();
+                isShutter = true;
+            }
         }
     };
     private Camera.PictureCallback onJpegPictureCallback = new Camera.PictureCallback() {
@@ -109,6 +114,8 @@ public class CameraFragment extends Fragment {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
+            mCallback.onPictureTaken();
 
             mCamera.startPreview();
             isCapturing = false;
@@ -208,6 +215,7 @@ public class CameraFragment extends Fragment {
     public void takePicture() {
         if (!isCapturing) {
             isCapturing = true;
+            isShutter = false;
 
             mParameters.setPictureSize(5376, 2688);
             mParameters.set("RIC_SHOOTING_MODE", "RicStillCaptureStd");
@@ -222,13 +230,15 @@ public class CameraFragment extends Fragment {
         }
     }
 
-    public boolean isMediaRecorder() {
+    public boolean isMediaRecorderNull() {
         return mMediaRecorder == null;
     }
 
     public boolean takeVideo() {
         boolean result = true;
         if (mMediaRecorder == null) {
+            mMediaRecorder = new MediaRecorder();
+
             mAudioManager.setParameters("RicUseBFormat=true");
             mAudioManager.setParameters("RicMicSelect=RicMicSelectAuto");
             mAudioManager
@@ -245,7 +255,6 @@ public class CameraFragment extends Fragment {
 
             mCamera.setParameters(mParameters);
 
-            mMediaRecorder = new MediaRecorder();
             mCamera.unlock();
 
             mMediaRecorder.setCamera(mCamera);

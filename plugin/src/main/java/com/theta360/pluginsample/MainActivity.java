@@ -64,8 +64,8 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
                 if (keyCode == KeyReceiver.KEYCODE_MEDIA_RECORD) {
                     Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
                     if (fragment != null && fragment instanceof CameraFragment) {
-                        if (((CameraFragment) fragment).isMediaRecorder()) {
-                            // not recording video
+                        if (((CameraFragment) fragment).isMediaRecorderNull() && !(((CameraFragment) fragment).isCapturing())) {
+                            // not recording video or capturing still
                             isVideo = !isVideo;
                             updateLED();
                         }
@@ -123,7 +123,7 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
         Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
         if (fragment != null && fragment instanceof CameraFragment) {
 
-            if (((CameraFragment) fragment).isMediaRecorder()) {
+            if (((CameraFragment) fragment).isMediaRecorderNull()) {
                 // start recording
                 if (!(((CameraFragment) fragment).isCapturing())) {
                     notificationAudioMovStart();
@@ -156,7 +156,7 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
         if (!isEnded) {
             Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
             if (fragment != null && fragment instanceof CameraFragment) {
-                if (!((CameraFragment) fragment).isMediaRecorder()) {
+                if (!((CameraFragment) fragment).isMediaRecorderNull()) {
                     takeVideo(); // stop recording
                 }
             }
