@@ -1,6 +1,6 @@
 # THETA Plug-in: CameraAPI Capture Plugin
 
-Version: 1.0.0
+Version: 2.0.0
 
 This sample plug-in shows the way of capturing image with Camera API for RICOH THETA V.
 
@@ -41,8 +41,8 @@ This sample plug-in has been developed under the following conditions.
 * Android&trade; Studio 3.1+
 * gradle 3.1.3
 * Android&trade; SDK (API Level 25)
-* compileSdkVersion 26
-* buildToolsVersion "27.0.3"
+* compileSdkVersion 25
+* buildToolsVersion "28.0.3"
 * minSdkVersion 25
 * targetSdkVersion 25
 
