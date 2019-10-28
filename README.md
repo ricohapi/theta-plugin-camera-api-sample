@@ -1,6 +1,6 @@
 # THETA Plug-in: CameraAPI Capture Plugin
 
-Version: 2.0.0
+Version: 2.1.0
 
 This sample plug-in shows the way of capturing image with Camera API for RICOH THETA V.
 
