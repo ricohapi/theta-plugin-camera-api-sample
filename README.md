@@ -1,16 +1,115 @@
 # THETA Plug-in: CameraAPI Capture Plugin
 
-Version: 2.1.0
+Version: 3.0.0
 
-This sample plug-in shows the way of capturing image with Camera API for RICOH THETA V.
+This sample plug-in shows the way of capturing image with Camera API for RICOH THETA V/Z1/X.
 
 ## Contents
 
-* [Terms of Service](#terms)
 * [Development Environment](#requirements)
 * [Specification of this plugin](#specification)
 * [Getting Started](#started)
+* [Terms of Service](#terms)
 * [Trademark Information](#trademark)
+
+<a name="requirements"></a>
+
+## Development Environment
+
+This sample plug-in has been developed under the following conditions.
+
+#### Camera
+
+* RICOH THETA X (Version 1.10.1)
+* RICOH THETA Z1 (Version 2.10.3)
+* RICOH THETA V (Version 2.40.2 or later)
+
+Tips : How to update your RICOH THETA firmware:
+> * [THETA X](https://support.theta360.com/en/manual/x/content/update/update_01.html)
+> * [THETA Z1](https://support.theta360.com/en/manual/z1/content/update/update_01.html)
+> * [THETA V](https://support.theta360.com/en/manual/v/content/update/update_01.html)
+
+#### Development Software
+
+* Android&trade; Studio 4.2.2
+    * Windows 10 Version 21H1
+    * macOS Monterey Version 12.2
+* gradle 4.2.2
+* Android&trade; SDK (API Level 29)
+* compileSdkVersion 29
+* minSdkVersion 25
+* targetSdkVersion 29
+* [RICOH THETA Plug-in Library](https://github.com/ricohapi/theta-plugin-library) (Version 3.0.4) is being imported.
+
+<a name="specification"></a>
+
+## Specification of this plugin
+* This plug-in capture still and video by using [Camera API](https://api.ricoh/docs/theta-plugin-reference/camera-api/), [AudioManager API](https://api.ricoh/docs/theta-plugin-reference/audio-manager-api/) and [PluginLibrary](https://github.com/ricohapi/theta-plugin-sdk/tree/master/pluginlibrary).
+* After capturing still or video, the JPEG or MP4(+WAV) file is stored as,
+    * THETA X: PC*.JPG or MV*.MP4 in DCIM/100_TEST folder.
+    * THETA V/Z1 : "yyyyMMddHHmmss".jpg (.mp4 or .wav for video). "yyyyMMddHHmmss" is 20180123123456 when it is 12:34:56 Jan 23, 2018.
+* WebAPI can not be used when Camera API is used.
+* The .mp4 file includes 4K video and 1ch monaural audio.
+
+* THETA V and THETA Z1 only
+    * The .wav file includes 4ch spatial audio as a first-order ambisonics B-format. Only for THETA V and THETA Z1.
+    * The metadata of the files (.mp4 and .jpg) which outputted by using CameraAPI will be missed than the case of using WebAPI. (We recommend to use WebAPI instead of CameraAPI.)
+
+<a name="started"></a>
+
+## Getting Started
+
+### THETA X
+1. Import this sample project into Android&trade; Studio.
+1. Verify that AndroidManifest.xml declears to support only RICOH THETA X.
+    * app/src/main/AndroidManifest.xml
+
+        ```xml
+        <uses-feature android:name="com.theta360.receptor.x"  android:required="true" />
+        <uses-feature android:name="com.theta360.receptor.z1" android:required="true" />
+        <uses-feature android:name="com.theta360.receptor.v"  android:required="true" />
+        ```
+
+1. Verify that build.gradle set RICOH THETA Plug-in Library as dependencies.
+    * app/build.gradle
+
+        ```gradle
+        dependencies {
+            ...
+            implementation 'com.theta360:pluginlibrary:3.0.4'
+            ...
+        }
+        ```
+
+    * build.gradle
+
+        ```gradle
+        allprojects {
+        repositories {
+            ...
+            maven { url 'https://github.com/ricohapi/theta-plugin-library/raw/master/repository' }
+            ...
+        }
+        ```
+
+1. Connect RICOH THETA X to PC with USB cable.
+1. Execute "Run" in Android&trade; Studio, then APK will be installed to RICOH THETA X automatically and you can debug it.
+
+### THETA V and THETA Z1
+1. Open Vysor chrome app to see desktop of the camera.
+1. Initial setting for debugging
+
+    At the first time to use this app, app need to be taken permissions to use camera and storage.
+    Settings → Apps → "CameraAPI Capture Plugin" → Permissions →
+      “Camera”, "Microphone" and “Storage” to be checked (turn ON).
+
+1. Launch "CameraAPI Capture Plugin" app
+    (Ignore button on GUI)
+1. Press shutter button to take a photo/video
+1. Pull JPEG/MP4/WAV by adb
+    "adb pull /sdcard/DCIM/yyyyMMddHHmmss.jpg" ("yyyyMMddHHmmss" is 20180123123456 when it is 12:34:56 Jan 23, 2018.)
+
+---
 
 <a name="terms"></a>
 ## Terms of Service
@@ -20,62 +119,6 @@ This sample plug-in shows the way of capturing image with Camera API for RICOH T
 By using the RICOH THETA Plug-in SDK, you are agreeing to the above and the license terms, [LICENSE.txt](LICENSE.txt).
 
 Copyright &copy; 2018 Ricoh Company, Ltd.
-
-<a name="requirements"></a>
-## Development Environment
-
-This sample plug-in has been developed under the following conditions.
-
-#### Camera
-
-* RICOH THETA V
-* Firmware ver.2.40.2 and above
-
-    > Information on checking and updating the firmware is [here](https://theta360.com/en/support/manual/v/content/pc/pc_09.html).
-
-#### RICOH THETA Plug-in SDK
-* Version: 1.0.1
-
-#### Development Software
-
-* Android&trade; Studio 3.1+
-* gradle 3.1.3
-* Android&trade; SDK (API Level 25)
-* compileSdkVersion 25
-* buildToolsVersion "28.0.3"
-* minSdkVersion 25
-* targetSdkVersion 25
-
-#### Operating System
-
-* Windows 10 Version 1709
-* macOS High Sierra ver.10.13
-
-<a name="specification"></a>
-## Specification of this plugin
-* This plug-in capture still and video by using [Camera API](https://api.ricoh/docs/theta-plugin-reference/camera-api/), [AudioManager API](https://api.ricoh/docs/theta-plugin-reference/audio-manager-api/) and [PluginLibrary](https://github.com/ricohapi/theta-plugin-sdk/tree/master/pluginlibrary) for RICOH THETA V. This plug-in has been made as an example to show the way of using Camera API for RICOH THETA V.
-* After capturing still or video, the JPEG or MP4+WAV file is stored in /sdcard/DCIM/ folder.
-* The stored file name is "yyyyMMddHHmmss".jpg (.mp4 or .wav for video). "yyyyMMddHHmmss" is 20180123123456 when it is 12:34:56 Jan 23, 2018.
-* WebAPI can not be used when Camera API is used.
-* The .wav file includes 4ch spatial audio as a first-order ambisonics B-format.
-* The .mp4 file includes 4K video and 1ch monaural audio.
-* The metadata of the files (.mp4 and .jpg) which outputted by using CameraAPI will be missed than the case of using WebAPI. (We recommend to use WebAPI instead of CameraAPI.)
-
-<a name="started"></a>
-## Getting Started
-
-0. Open Vysor chrome app to see desktop of the camera.
-1. Initial setting for debugging
-
-    At the first time to use this app, app need to be taken permissions to use camera and storage.
-    Settings → Apps → "CameraAPI Capture Plugin" → Permissions →
-      “Camera”, "Microphone" and “Storage” to be checked (turn ON).
-
-2. Launch "CameraAPI Capture Plugin" app
-    (Ignore button on GUI)
-3. Press shutter button to take a photo/video
-4. Pull JPEG/MP4/WAV by adb
-    "adb pull /sdcard/DCIM/yyyyMMddHHmmss.jpg" ("yyyyMMddHHmmss" is 20180123123456 when it is 12:34:56 Jan 23, 2018.)
 
 <a name="trademark"></a>
 ## Trademark Information
