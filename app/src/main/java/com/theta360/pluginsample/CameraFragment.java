@@ -26,8 +26,6 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -62,8 +60,11 @@ import java.util.List;
  * CameraFragment
  */
 public class CameraFragment extends Fragment {
+
+    public CameraFragment() {
+    }
+
     private FactoryBase factory;
-    private SurfaceHolder mSurfaceHolder;
     private Camera mCamera;
     private int mCameraId;
     private Camera.Parameters mParameters;
@@ -71,7 +72,7 @@ public class CameraFragment extends Fragment {
     private Box.Callback mBoxCallback;
     private AudioManager mAudioManager;//for video
     private MediaRecorder mMediaRecorder;//for video
-    private boolean mIsSurface = false;
+    //private boolean mIsSurface = false;
     private boolean mIsCapturing = false;
     private boolean mIsDuringExposure = false;
     private File mInstanceRecordMP4;
@@ -79,23 +80,64 @@ public class CameraFragment extends Fragment {
     private String mMp4filePath;
     private String mWavfilePath;
     private CameraAttitude mCameraAttitude = null;
-    private View takeVideoView;
 
     private String TAG = "CameraFragment";
 
-    public static final String DCIM =
-            (ThetaModel.isVCameraModel())? Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_DCIM).getPath(): "/DCIM/";
+    private static final String DCIM =
+            (ThetaModel.isVCameraModel()) ? Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DCIM).getPath() : "/DCIM/";
     private String FOLDER = "/DCIM/100_TEST/";
     private String PATH_INTERNAL = "/storage/emulated/0";
     private String PATH = PATH_INTERNAL;
     private String mPath = "";
-    public String mFilepath = "";
+    private String mFilepath = "";
+
+    public boolean isMediaRecorderNull() {
+        return mMediaRecorder == null;
+    }
+
+    public boolean isCapturing() {
+        return mIsCapturing;
+    }
+
+    /**
+     * Sample: Returns the MP4 file and WAV file that it holds
+     *
+     * @return recordFiles [0]:MP4 file [1]:WAV file
+     */
+    public File[] getRecordFiles() {
+        File[] recordFiles = {mInstanceRecordMP4, mInstanceRecordWAV};
+        return recordFiles;
+    }
+
+    public interface CFCallback {
+        void onShutter();
+        void onPictureTaken(String[] fileUrls);
+    }
+
+    /**
+     * CallBack allows you to configure the processing
+     * when metadata write succeeds and fails.
+     */
+    public void setBoxCallback(@NonNull Box.Callback callback) {
+        mBoxCallback = callback;
+    }
+
+    private Camera.ErrorCallback mErrorCallback = new Camera.ErrorCallback() {
+        @Override
+        public void onError(int var1, theta360.hardware.Camera var2) {
+        }
+
+        @Override
+        public void onError(int var1, android.hardware.Camera var2) {
+        }
+    };
 
     private MediaRecorder.OnInfoListener onInfoListener = new MediaRecorder.OnInfoListener() {
         @Override
         public void onInfo(android.media.MediaRecorder mediaRecorder, int what, int extra) {
         }
+
         @Override
         public void onInfo(theta360.media.MediaRecorder mediaRecorder, int what, int extra) {
         }
@@ -105,36 +147,140 @@ public class CameraFragment extends Fragment {
         @Override
         public void onError(android.media.MediaRecorder mediaRecorder, int what, int extra) {
         }
+
         @Override
         public void onError(theta360.media.MediaRecorder mediaRecorder, int what, int extra) {
         }
     };
 
-    private Camera.ErrorCallback mErrorCallback = new Camera.ErrorCallback() {
-        @Override
-        public void onError(int var1, theta360.hardware.Camera var2) {
-        }
-        @Override
-        public void onError(int var1, android.hardware.Camera var2) {
-        }
-    };
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        Log.d(TAG, "onCreateView");
+        factory = new FactoryBase();
 
-    private SurfaceHolder.Callback mSurfaceHolderCallback = new SurfaceHolder.Callback() {
-        @Override
-        public void surfaceCreated(SurfaceHolder surfaceHolder) {
-            mIsSurface = true;
-            open();
+        //THETA X
+        if (ThetaModel.isXModel()) {
+            mCamera = factory.abstractCamera(FactoryBase.CameraModel.XCamera);
         }
-        @Override
-        public void surfaceChanged(SurfaceHolder surfaceHolder, int format, int width, int height) {
-            setSurface(surfaceHolder);
+
+        //THETA V and THETA Z1
+        if (ThetaModel.isVCameraModel()) {
+            mCamera = factory.abstractCamera(FactoryBase.CameraModel.VCamera);
         }
-        @Override
-        public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-            mIsSurface = false;
-            close();
+
+        return inflater.inflate(R.layout.fragment_main, container, false);
+    }
+
+    @Override
+    public void onViewCreated(final View view, Bundle savedInstanceState) {
+        Log.d(TAG, "onViewCreated");
+        mAudioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);//for video
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+
+        if (context instanceof CFCallback) {
+            mCallback = (CFCallback) context;
         }
-    };
+
+        /*
+         * Attitude sensor start
+         */
+        mCameraAttitude = new CameraAttitude(context);
+        mCameraAttitude.register();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        //startWatching(); // for debug
+    }
+
+    @Override
+    public void onStop() {
+        //stopWatching(); // for debug
+        super.onStop();
+    }
+
+    @Override
+    public void onDetach() {
+        mCallback = null;
+
+        /*
+         * Attitude sensor stop
+         */
+        mCameraAttitude.unregister();
+
+        super.onDetach();
+    }
+
+    public void open(SurfaceTexture surface) throws IOException {
+
+        //THETA X
+        if (!ThetaModel.isVCameraModel()) {
+            mCameraId = theta360.hardware.Camera.CameraInfo.CAMERA_FACING_DOUBLE;
+            mCamera.open(getContext(), mCameraId);
+            mCamera.setPreviewTexture(surface);
+            mCamera.setErrorCallback(mErrorCallback);
+            mParameters = mCamera.getParameters();
+
+            /**
+             * Initialize CameraSettings for Metadata
+             */
+            CameraSettings.initialize();
+
+            mParameters.set("RIC_SHOOTING_MODE", "RicPreview1024");
+            mParameters.setPreviewSize(1024, 512);
+            mCamera.setParameters();
+            mCamera.startPreview();
+        }
+
+        //THETA V and Z1
+        if (ThetaModel.isVCameraModel()) {
+            mCameraId = android.hardware.Camera.CameraInfo.CAMERA_FACING_BACK;
+            mCamera.open(mCameraId);
+            mCamera.setPreviewTexture(surface);
+            mCamera.setErrorCallback(mErrorCallback);
+            mParameters = mCamera.getParameters();
+
+            /**
+             * Initialize CameraSettings for Metadata
+             */
+            CameraSettings.initialize();
+
+            mParameters.set("RIC_SHOOTING_MODE", "RicMonitoring");
+            mParameters.setPreviewSize(1920, 960);
+            mCamera.setParameters();
+            mCamera.startPreview();
+        }
+    }
+
+    public void close() {
+        if (mCamera != null) {
+            mCamera.stopPreview();
+            mCamera.setPreviewCallback(null);
+            mCamera.setErrorCallback(null);
+            mCamera.release();
+            mCamera = null;
+            mIsCapturing = false;
+            mIsDuringExposure = false;
+        }
+        releaseMediaRecorder();
+    }
+
+    private void releaseMediaRecorder () {
+        if (mMediaRecorder != null) {
+            //mMediaRecorder.reset();
+            mMediaRecorder.setOnInfoListener(null);
+            mMediaRecorder.setOnErrorListener(null);
+            mMediaRecorder.release();
+            mMediaRecorder = null;
+            mCamera.lock();
+            mIsCapturing = false;
+        }
+    }
 
     private Camera.ShutterCallback onShutterCallback = new Camera.ShutterCallback() {
         @Override
@@ -183,12 +329,12 @@ public class CameraFragment extends Fragment {
 
         @Override
         public void onLongShutter() {
-            //
+            //TODO
         }
 
         @Override
         public void onShutterend() {
-            //
+            //TODO
         }
     };
 
@@ -237,6 +383,14 @@ public class CameraFragment extends Fragment {
         return (new File(mFilepath));
     }
 
+    private String getDateTime() {
+        Date date = new Date(System.currentTimeMillis());
+        String format = "yyyyMMddHHmmss";
+        SimpleDateFormat sdf = new SimpleDateFormat(format);
+        String text = sdf.format(date);
+        return text;
+    }
+
     private Camera.PictureCallback onJpegPictureCallback = new Camera.PictureCallback() {
 
         //THETA X
@@ -269,7 +423,6 @@ public class CameraFragment extends Fragment {
         //THETA V and THETA Z1
         @Override
         public void onPictureTaken(byte[] data, android.hardware.Camera camera) {
-
             mParameters.set("RIC_PROC_STITCHING", "RicStaticStitching");
             mCamera.setParameters();
             mCamera.stopPreview();
@@ -385,6 +538,7 @@ public class CameraFragment extends Fragment {
             byte[] exifData = exif.getExif();
 
             String fileUrl = String.format("%s/plugin_%s.JPG", DCIM, getDateTime());
+            Log.i(TAG, "JPEG file path = " + fileUrl);
             List<String> fileUrls = new ArrayList<String>();
             fileUrls.add(fileUrl);
             try (FileOutputStream fileOutputStream = new FileOutputStream(fileUrl)) {
@@ -448,83 +602,6 @@ public class CameraFragment extends Fragment {
         }
     };
 
-    public CameraFragment() {
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        factory = new FactoryBase();
-
-        //THETA X
-        if (ThetaModel.isXModel()) {
-            mCamera = factory.abstractCamera(FactoryBase.CameraModel.XCamera);
-        }
-
-        //THETA V and THETA Z1
-        if (ThetaModel.isVCameraModel()) {
-            mCamera = factory.abstractCamera(FactoryBase.CameraModel.VCamera);
-        }
-
-        return inflater.inflate(R.layout.fragment_main, container, false);
-    }
-
-    @Override
-    public void onViewCreated(final View view, Bundle savedInstanceState) {
-        SurfaceView surfaceView = (SurfaceView) view.findViewById(R.id.surfaceView);
-        mSurfaceHolder = surfaceView.getHolder();
-        mSurfaceHolder.addCallback(mSurfaceHolderCallback);
-        mAudioManager = (AudioManager) getContext()
-                .getSystemService(Context.AUDIO_SERVICE);//for video
-        //TODO do not show preview during video recording
-        takeVideoView = view.findViewById(R.id.takeVideoView);
-    }
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-
-        if (context instanceof CFCallback) {
-            mCallback = (CFCallback) context;
-        }
-
-        /*
-         * Attitude sensor start
-         */
-        mCameraAttitude = new CameraAttitude(context);
-        mCameraAttitude.register();
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        //startWatching(); // for debug
-        if (mIsSurface) {
-            open();
-            setSurface(mSurfaceHolder);
-        }
-    }
-
-    @Override
-    public void onStop() {
-        //stopWatching(); // for debug
-        close();
-        super.onStop();
-    }
-
-    @Override
-    public void onDetach() {
-        Log.d(TAG, "onDetach()");
-        mCallback = null;
-
-        /*
-         * Attitude sensor stop
-         */
-        mCameraAttitude.unregister();
-
-        super.onDetach();
-    }
-
     public void takePicture() {
         if (!mIsCapturing) {
             mIsCapturing = true;
@@ -575,10 +652,6 @@ public class CameraFragment extends Fragment {
             mCamera.takePicture(onShutterCallback, null, onJpegPictureCallback);
             Log.d(TAG, "mCamera.takePicture()");
         }
-    }
-
-    public boolean isMediaRecorderNull() {
-        return mMediaRecorder == null;
     }
 
     public boolean takeVideo() {
@@ -642,19 +715,19 @@ public class CameraFragment extends Fragment {
                 try {
                     mMediaRecorder.prepare();
                     mMediaRecorder.start();
+                    mIsCapturing = true;
                     Log.d(TAG, "mMediaRecorder.start()");
                 } catch (IOException | RuntimeException e) {
                     e.printStackTrace();
                     releaseMediaRecorder();
                     result = false;
                 }
-                //TODO
-                takeVideoView.setVisibility(View.VISIBLE);
             }
             //stop video recording
             else {
                 try {
                     mMediaRecorder.stop();
+                    mIsCapturing = false;
                     Log.d(TAG, "mMediaRecorder.stop()");
                 } catch (RuntimeException e) {
                     result = false;
@@ -666,7 +739,7 @@ public class CameraFragment extends Fragment {
                 fileUrls.add(mFilepath);
                 mBoxCallback.onCompleted(fileUrls.toArray(new String[fileUrls.size()]));
 
-                takeVideoView.setVisibility(View.GONE);
+                //takeVideoView.setVisibility(View.GONE);
             }
             return result;
         }
@@ -715,13 +788,12 @@ public class CameraFragment extends Fragment {
                 String dateTime = getDateTime();
                 mMp4filePath = String.format("%s/plugin_%s.MP4", DCIM, dateTime);
                 mWavfilePath = String.format("%s/plugin_%s.WAV", DCIM, dateTime);
+                Log.i(TAG, "MP4 file path = " + mMp4filePath);
                 String videoWavFile = String.format("%s,%s", mMp4filePath, mWavfilePath);
                 mMediaRecorder.setOutputFile(videoWavFile);
-                mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
+                //mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
                 mMediaRecorder.setOnErrorListener(onErrorListener);
                 mMediaRecorder.setOnInfoListener(onInfoListener);
-
-                Log.d(TAG, "mMp4filePath="+mMp4filePath);
 
                 try {
                     /**
@@ -830,128 +902,5 @@ public class CameraFragment extends Fragment {
             return result;
         }
         return result;
-    }
-
-    /**
-     * CallBack allows you to configure the processing
-     * when metadata write succeeds and fails.
-     */
-    public void setBoxCallback(@NonNull Box.Callback callback) {
-        mBoxCallback = callback;
-    }
-
-    /**
-     * Sample: Returns the MP4 file and WAV file that it holds
-     * @return recordFiles [0]:MP4 file [1]:WAV file
-     */
-    public File[] getRecordFiles() {
-        File[] recordFiles = {mInstanceRecordMP4, mInstanceRecordWAV};
-        return recordFiles;
-    }
-
-    public boolean isCapturing() {
-        return mIsCapturing;
-    }
-
-    private void open() {
-
-        //THETA X
-        if (!ThetaModel.isVCameraModel()) {
-            mCameraId = theta360.hardware.Camera.CameraInfo.CAMERA_FACING_DOUBLE;
-            mCamera.open(getContext(), mCameraId);
-            //TODO mCamera.setPreviewTexture();
-            mCamera.setErrorCallback(mErrorCallback);
-            mParameters = mCamera.getParameters();
-
-            /**
-             * Initialize CameraSettings for Metadata
-             */
-            CameraSettings.initialize();
-
-            mParameters.set("RIC_SHOOTING_MODE", "RicPreview1024");
-            mCamera.setParameters();
-        }
-
-        //THETA V and Z1
-        if (ThetaModel.isVCameraModel()) {
-            mCameraId = android.hardware.Camera.CameraInfo.CAMERA_FACING_BACK;
-            mCamera.open(mCameraId);
-            mCamera.setErrorCallback(mErrorCallback);
-            mParameters = mCamera.getParameters();
-
-            /**
-             * Initialize CameraSettings for Metadata
-             */
-            CameraSettings.initialize();
-            Log.d(TAG, "initialize");
-
-            mParameters.set("RIC_SHOOTING_MODE", "RicMonitoring");
-            mCamera.setParameters();
-        }
-    }
-
-    protected void close() {
-        if (mCamera != null) {
-            mCamera.stopPreview();
-            mCamera.setPreviewCallback(null);
-            mCamera.setErrorCallback(null);
-            mCamera.release();
-            mCamera = null;
-            mIsCapturing = false;
-            mIsDuringExposure = false;
-        }
-        releaseMediaRecorder();
-    }
-
-    private void releaseMediaRecorder () {
-        Log.d(TAG,"releaseMediaRecorder()");
-        if (mMediaRecorder != null) {
-            //mMediaRecorder.reset();
-            mMediaRecorder.setOnInfoListener(null);
-            mMediaRecorder.setOnErrorListener(null);
-            mMediaRecorder.release();
-            mMediaRecorder = null;
-            mCamera.lock();
-        }
-    }
-
-    private void setSurface(@NonNull SurfaceHolder surfaceHolder) {
-        if (mCamera != null) {
-            //mCamera.stopPreview();
-            mCamera.setPreviewDisplay(surfaceHolder);
-            //THETA X
-            if (ThetaModel.isXModel()) {
-                mParameters.setPreviewSize(1024, 512);
-            }
-            //THETA V and THETA Z1
-            if (ThetaModel.isVCameraModel()) {
-                mParameters.setPreviewSize(1920, 960);
-            }
-            mCamera.setParameters();
-            mCamera.startPreview();
-        }
-    }
-
-    private void setSurface(@NonNull SurfaceTexture surface) throws IOException {
-        if (mCamera != null) {
-            //mCamera.stopPreview();
-            mCamera.setPreviewTexture(surface);
-            mParameters.setPreviewSize(1024, 512);
-            mCamera.setParameters();
-            mCamera.startPreview();
-        }
-    }
-
-    private String getDateTime() {
-        Date date = new Date(System.currentTimeMillis());
-        String format = "yyyyMMddHHmmss";
-        SimpleDateFormat sdf = new SimpleDateFormat(format);
-        String text = sdf.format(date);
-        return text;
-    }
-
-    public interface CFCallback {
-        void onShutter();
-        void onPictureTaken(String[] fileUrls);
     }
 }

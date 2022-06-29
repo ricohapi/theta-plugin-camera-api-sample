@@ -16,12 +16,14 @@
 
 package com.theta360.pluginsample;
 
+import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.TextureView;
 import android.view.WindowManager;
+import android.widget.ImageView;
 
 import com.theta360.pluginlibrary.activity.PluginActivity;
 import com.theta360.pluginlibrary.callback.KeyCallback;
@@ -33,6 +35,7 @@ import com.theta360.pluginlibrary.values.TextArea;
 import com.theta360.pluginlibrary.values.ThetaModel;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -76,15 +79,11 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
             @Override
             public void onKeyUp(int keyCode, KeyEvent event) {
                 if (keyCode == KeyReceiver.KEYCODE_MEDIA_RECORD) {
-                    Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-                    if (fragment != null && fragment instanceof CameraFragment) {
-                        if (((CameraFragment) fragment).isMediaRecorderNull()) {
-                            if(!(((CameraFragment) fragment).isCapturing())) {
-                                // not recording video or capturing still
-                                mIsVideo = !mIsVideo;
-                                updateLED();
-                            }
-                        }
+                    CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+                    // not during recording video or not during capturing still
+                    if (camera.isMediaRecorderNull() && !camera.isCapturing()) {
+                        mIsVideo = !mIsVideo;
+                        updateUI();
                     }
                 }
             }
@@ -99,13 +98,42 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
 
         notificationWlanOff();
         notificationCameraClose();  //only for THETA V and THETA Z1
+
+        //show preview in TextureView
+        TextureView texture_view = (TextureView) findViewById(R.id.texture_view);
+        texture_view.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+            @Override
+            public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+                try {
+                    CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+                    camera.open(surface);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+                //do nothing
+            }
+
+            @Override
+            public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                return false;
+            }
+
+            @Override
+            public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+                //do nothing
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         Log.i(TAG,"onResume");
         setAutoClose(true);      //the flag which does finish plug-in by long-press MODE
-        updateLED();
+        updateUI();
         super.onResume();
     }
 
@@ -119,6 +147,7 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
 
     @Override
     public void onShutter() {
+        Log.i(TAG,"onShutter");
         notificationAudioShutter();
     }
 
@@ -129,6 +158,7 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
         if (ThetaModel.isXModel()) {
             String fileUrl = fileUrls[0];
             notificationDatabaseUpdate(fileUrl);
+            updateUI();
         }
 
         //THETA V and THETA Z1
@@ -144,48 +174,44 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
                 fileUrls[i] = fileUrls[i].replace(storagePath, "");
             }
             notificationDatabaseUpdate(fileUrls);
+            updateUI();
         }
     }
 
     private void takePicture() {
-        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-        if (fragment != null && fragment instanceof CameraFragment) {
-            if (!(((CameraFragment) fragment).isCapturing())) {
-                notificationSensorStart();  //only for THETA V and THETA Z1
-                ((CameraFragment) fragment).takePicture();
-            }
+        CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+        if (!camera.isCapturing()) {
+           notificationSensorStart();  //only for THETA V and THETA Z1
+           camera.takePicture();
+           updateUI();
         }
     }
 
     private boolean takeVideo() {
         boolean result = true;
-        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-        if (fragment != null && fragment instanceof CameraFragment) {
+        CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
 
-            //start video recording
-            if (((CameraFragment) fragment).isMediaRecorderNull()) {
-                if (!(((CameraFragment) fragment).isCapturing())) {
-                    notificationAudioMovStart();
-                    notificationLedBlink(LedTarget.LED7, LedColor.RED, 2000);  //only for THETA V
-                }
-                // Sample: Register callback to CameraFragment
-                // to acquire the result of Box data writing
-                ((CameraFragment) fragment).setBoxCallback(mBoxCallBack);
-                notificationSensorStart();  //only for THETA V and THETA Z1
-                result = ((CameraFragment) fragment).takeVideo();
+        //start video recording
+        if (camera.isMediaRecorderNull()) {
+            // Sample: Register callback to CameraFragment
+            // to acquire the result of Box data writing
+            camera.setBoxCallback(mBoxCallBack);
+            notificationSensorStart();  //only for THETA V and THETA Z1
+            if (result = camera.takeVideo()) {
+                notificationAudioMovStart();
             }
+            updateUI();
+        }
 
-            //stop video recording
-            else {
-                File[] recordFiles = ((CameraFragment) fragment).getRecordFiles();
-                mRecordMp4File = recordFiles[0];
-                mRecordWavFile = recordFiles[1];
-                result = ((CameraFragment) fragment).takeVideo();
-                if (result) {
-                    notificationAudioMovStop();
-                }
-                notificationLedHide(LedTarget.LED7);  //only for THETA V
+        //stop video recording
+        else {
+            File[] recordFiles = camera.getRecordFiles();
+            mRecordMp4File = recordFiles[0];
+            mRecordWavFile = recordFiles[1];
+            if (result = camera.takeVideo()) {
+                notificationAudioMovStop();
             }
+            updateUI();
         }
 
         return result;
@@ -247,11 +273,25 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
         }
     };
 
-    private void updateLED() {
+    private void updateUI() {
+
+        //camera fragment
+        CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
 
         //THETA X
         if (ThetaModel.isXModel()) {
-            //TODO update icon
+            ImageView mode_icon = (ImageView) findViewById(R.id.mode_icon);
+            boolean isCapturing = camera.isCapturing();
+            if (mIsVideo) {
+                mode_icon.setImageResource(isCapturing?
+                        R.drawable.u_1_1_25_btn_movie_down:
+                        R.drawable.u_1_1_25_btn_movie);
+            }
+            else {
+                mode_icon.setImageResource(isCapturing?
+                        R.drawable.u_1_1_24_btn_stillcamera_down:
+                        R.drawable.u_1_1_24_btn_stillcamera);
+            }
         }
 
         //THETA Z1
@@ -267,10 +307,21 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
 
         //THETA V
         if (ThetaModel.isVModel()) {
+            //video mode
             if (mIsVideo) {
                 notificationLedHide(LedTarget.LED4);
                 notificationLedShow(LedTarget.LED5);
-            } else {
+                //start video recording
+                if (camera.isCapturing()) {
+                    notificationLedBlink(LedTarget.LED7, LedColor.RED, 2000);
+                }
+                //stop video recording
+                else {
+                    notificationLedHide(LedTarget.LED7);
+                }
+            }
+            //still mode
+            else {
                 notificationLedHide(LedTarget.LED5);
                 notificationLedShow(LedTarget.LED4);
             }
@@ -279,13 +330,12 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
 
     private void endProcess() {
         if (!mIsEnded) {
-            Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-            if (fragment != null && fragment instanceof CameraFragment) {
-                if (!((CameraFragment) fragment).isMediaRecorderNull()) {
-                    takeVideo(); // stop recording
-                }
-                ((CameraFragment) fragment).close();
+            CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+            //stop recording
+            if (!camera.isMediaRecorderNull()) {
+                takeVideo(); // stop recording
             }
+            camera.close();
             close();
             mIsEnded = true;
         }

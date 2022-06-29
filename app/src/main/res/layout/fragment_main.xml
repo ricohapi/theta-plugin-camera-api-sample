@@ -7,21 +7,23 @@
     tools:context="com.theta360.pluginsample.CameraFragment"
     tools:showIn="@layout/activity_main">
 
-    <SurfaceView
-        android:id="@+id/surfaceView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <FrameLayout
-        android:id="@+id/takeVideoView"
+    <TextureView
+        android:id="@+id/texture_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/colorBlack"
-        android:visibility="gone"
-        />
+        android:layout_height="0dp"
+        app:layout_constraintDimensionRatio="2"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="16dp" />
+
+    <ImageView
+        android:id="@+id/mode_icon"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginBottom="32dp"
+        android:alpha="64"
+        android:src="@drawable/u_1_1_24_btn_stillcamera"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </android.support.constraint.ConstraintLayout>
