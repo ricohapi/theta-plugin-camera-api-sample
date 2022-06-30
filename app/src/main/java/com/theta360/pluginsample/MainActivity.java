@@ -45,6 +45,7 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
     private boolean mIsEnded = false;
     private File mRecordMp4File;
     private File mRecordWavFile;
+    private CameraFragment mCamera;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,14 +100,16 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
         notificationWlanOff();
         notificationCameraClose();  //only for THETA V and THETA Z1
 
+        //CameraFragment
+        mCamera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+
         //show preview in TextureView
         TextureView texture_view = (TextureView) findViewById(R.id.texture_view);
         texture_view.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
                 try {
-                    CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
-                    camera.open(surface);
+                    mCamera.open(surface);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -132,6 +135,7 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
     @Override
     protected void onResume() {
         Log.i(TAG,"onResume");
+        mIsEnded = false;
         setAutoClose(true);      //the flag which does finish plug-in by long-press MODE
         updateUI();
         super.onResume();
@@ -179,25 +183,23 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
     }
 
     private void takePicture() {
-        CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
-        if (!camera.isCapturing()) {
-           notificationSensorStart();  //only for THETA V and THETA Z1
-           camera.takePicture();
-           updateUI();
+        if (!mCamera.isCapturing()) {
+            notificationSensorStart();  //only for THETA V and THETA Z1
+            mCamera.takePicture();
+            updateUI();
         }
     }
 
     private boolean takeVideo() {
         boolean result = true;
-        CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
 
         //start video recording
-        if (camera.isMediaRecorderNull()) {
+        if (mCamera.isMediaRecorderNull()) {
             // Sample: Register callback to CameraFragment
             // to acquire the result of Box data writing
-            camera.setBoxCallback(mBoxCallBack);
+            mCamera.setBoxCallback(mBoxCallBack);
             notificationSensorStart();  //only for THETA V and THETA Z1
-            if (result = camera.takeVideo()) {
+            if (result = mCamera.takeVideo()) {
                 notificationAudioMovStart();
             }
             updateUI();
@@ -205,10 +207,10 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
 
         //stop video recording
         else {
-            File[] recordFiles = camera.getRecordFiles();
+            File[] recordFiles = mCamera.getRecordFiles();
             mRecordMp4File = recordFiles[0];
             mRecordWavFile = recordFiles[1];
-            if (result = camera.takeVideo()) {
+            if (result = mCamera.takeVideo()) {
                 notificationAudioMovStop();
             }
             updateUI();
@@ -330,12 +332,11 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
 
     private void endProcess() {
         if (!mIsEnded) {
-            CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
-            //stop recording
-            if (!camera.isMediaRecorderNull()) {
+            Log.d(TAG, "endProcess");
+            if (!mCamera.isMediaRecorderNull()) {
                 takeVideo(); // stop recording
             }
-            camera.close();
+            mCamera.close();
             close();
             mIsEnded = true;
         }

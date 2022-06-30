@@ -56,6 +56,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import static android.security.KeyStore.getApplicationContext;
+
 /**
  * CameraFragment
  */
@@ -219,7 +221,7 @@ public class CameraFragment extends Fragment {
     public void open(SurfaceTexture surface) throws IOException {
 
         //THETA X
-        if (!ThetaModel.isVCameraModel()) {
+        if (ThetaModel.isXModel()) {
             mCameraId = theta360.hardware.Camera.CameraInfo.CAMERA_FACING_DOUBLE;
             mCamera.open(getContext(), mCameraId);
             mCamera.setPreviewTexture(surface);
@@ -665,7 +667,7 @@ public class CameraFragment extends Fragment {
                 mMediaRecorder.newMediaRecorder();
 
                 //Context
-                mMediaRecorder.setMediaRecorderContext(getContext());
+                mMediaRecorder.setMediaRecorderContext(getApplicationContext());
                 //Audio Setting
                 mMediaRecorder.setAudioSource(theta360.media.MediaRecorder.AudioSource.DEFAULT);
                 //mMediaRecorder.setMicDeviceId(mMediaRecorder.getExternalDeviceId());
@@ -709,8 +711,8 @@ public class CameraFragment extends Fragment {
                 CameraSettings.setSphereType(SphereType.EQUIRECTANGULAR);
 
                 //mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
-                //mMediaRecorder.setOnErrorListener(onErrorListener);
-                //mMediaRecorder.setOnInfoListener(onInfoListener);
+                mMediaRecorder.setOnErrorListener(onErrorListener);
+                mMediaRecorder.setOnInfoListener(onInfoListener);
 
                 try {
                     mMediaRecorder.prepare();
