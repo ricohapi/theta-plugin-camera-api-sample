@@ -16,45 +16,52 @@
 
 package com.theta360.pluginsample;
 
+import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.v4.app.Fragment;
-import android.support.v7.app.ActionBar;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.TextureView;
 import android.view.WindowManager;
+import android.widget.ImageView;
+
 import com.theta360.pluginlibrary.activity.PluginActivity;
-import com.theta360.pluginlibrary.activity.ThetaInfo;
 import com.theta360.pluginlibrary.callback.KeyCallback;
+import com.theta360.pluginlibrary.exif.Box;
 import com.theta360.pluginlibrary.receiver.KeyReceiver;
 import com.theta360.pluginlibrary.values.LedColor;
 import com.theta360.pluginlibrary.values.LedTarget;
-import com.theta360.pluginlibrary.exif.Box;
 import com.theta360.pluginlibrary.values.TextArea;
 import com.theta360.pluginlibrary.values.ThetaModel;
+
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends PluginActivity implements CameraFragment.CFCallback {
+    private String TAG = "Sample";
     private boolean mIsVideo = false;
     private boolean mIsEnded = false;
     private File mRecordMp4File;
     private File mRecordWavFile;
+    private CameraFragment mCamera;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.hide();
-        }
+        //ActionBar actionBar = getSupportActionBar();
+        //if (actionBar != null) {
+        //    actionBar.hide();
+        //}
 
+        //do not enter to sleep mode.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        // Set a callback when a button operation event is acquired.
+        setAutoClose(false);
+
         setKeyCallback(new KeyCallback() {
             @Override
             public void onKeyDown(int keyCode, KeyEvent event) {
@@ -73,14 +80,11 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
             @Override
             public void onKeyUp(int keyCode, KeyEvent event) {
                 if (keyCode == KeyReceiver.KEYCODE_MEDIA_RECORD) {
-                    Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-                    if (fragment != null && fragment instanceof CameraFragment) {
-                        if (((CameraFragment) fragment).isMediaRecorderNull()
-                                && !(((CameraFragment) fragment).isCapturing())) {
-                            // not recording video or capturing still
-                            mIsVideo = !mIsVideo;
-                            updateLED();
-                        }
+                    CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+                    // not during recording video or not during capturing still
+                    if (camera.isMediaRecorderNull() && !camera.isCapturing()) {
+                        mIsVideo = !mIsVideo;
+                        updateUI();
                     }
                 }
             }
@@ -94,82 +98,124 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
         });
 
         notificationWlanOff();
-        notificationCameraClose();
+        notificationCameraClose();  //only for THETA V and THETA Z1
+
+        //CameraFragment
+        mCamera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+
+        //show preview in TextureView
+        TextureView texture_view = (TextureView) findViewById(R.id.texture_view);
+        texture_view.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+            @Override
+            public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+                try {
+                    mCamera.open(surface);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+                //do nothing
+            }
+
+            @Override
+            public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                return false;
+            }
+
+            @Override
+            public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+                //do nothing
+            }
+        });
     }
 
     @Override
     protected void onResume() {
+        Log.i(TAG,"onResume");
+        mIsEnded = false;
+        setAutoClose(true);      //the flag which does finish plug-in by long-press MODE
+        updateUI();
         super.onResume();
-
-        updateLED();
     }
 
     @Override
     protected void onPause() {
+        Log.i(TAG,"onPause");
+        setAutoClose(false);     //the flag which does not finish plug-in in onPause
         endProcess();
-
         super.onPause();
     }
 
     @Override
     public void onShutter() {
+        Log.i(TAG,"onShutter");
         notificationAudioShutter();
     }
 
     @Override
     public void onPictureTaken(String[] fileUrls) {
-        notificationSensorStop();
-        /**
-         * The file path specified in "notificationDatabaseUpdate"
-         * specifies the file path or directory path under the DCIM directory.
-         * Replace file path because fileUrls has full path set
-         */
-        String storagePath = Environment.getExternalStorageDirectory().getPath();
-        for(int i = 0; i < fileUrls.length; i++){
-            fileUrls[i] = fileUrls[i].replace(storagePath, "");
+
+        //THETA X
+        if (ThetaModel.isXModel()) {
+            String fileUrl = fileUrls[0];
+            notificationDatabaseUpdate(fileUrl);
+            updateUI();
         }
-        notificationDatabaseUpdate(fileUrls);
+
+        //THETA V and THETA Z1
+        if (ThetaModel.isVCameraModel()) {
+            notificationSensorStop();
+            /**
+             * The file path specified in "notificationDatabaseUpdate"
+             * specifies the file path or directory path under the DCIM directory.
+             * Replace file path because fileUrls has full path set
+             */
+            String storagePath = Environment.getExternalStorageDirectory().getPath();
+            for(int i = 0; i < fileUrls.length; i++){
+                fileUrls[i] = fileUrls[i].replace(storagePath, "");
+            }
+            notificationDatabaseUpdate(fileUrls);
+            updateUI();
+        }
     }
 
     private void takePicture() {
-        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-        if (fragment != null && fragment instanceof CameraFragment) {
-            if (!(((CameraFragment) fragment).isCapturing())) {
-                notificationSensorStart();
-                ((CameraFragment) fragment).takePicture();
-            }
+        if (!mCamera.isCapturing()) {
+            notificationSensorStart();  //only for THETA V and THETA Z1
+            mCamera.takePicture();
+            updateUI();
         }
     }
 
     private boolean takeVideo() {
         boolean result = true;
-        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-        if (fragment != null && fragment instanceof CameraFragment) {
 
-            if (((CameraFragment) fragment).isMediaRecorderNull()) {
-                // start recording
-                if (!(((CameraFragment) fragment).isCapturing())) {
-                    notificationAudioMovStart();
-                    notificationLedBlink(LedTarget.LED7, LedColor.RED, 2000);
-                }
-                // Sample: Register callback to CameraFragment
-                // to acquire the result of Box data writing
-                ((CameraFragment) fragment).setBoxCallback(mBoxCallBack);
-                notificationSensorStart();
-                result = ((CameraFragment) fragment).takeVideo();
-            } else {
-                // Sample: Get recorded file
-                File[] recordFiles = ((CameraFragment) fragment).getRecordFiles();
-                mRecordMp4File = recordFiles[0];
-                mRecordWavFile = recordFiles[1];
-                // stop recording
-                result = ((CameraFragment) fragment).takeVideo();
-                if (result) {
-                    notificationAudioMovStop();
-                }
-                notificationLedHide(LedTarget.LED7);
+        //start video recording
+        if (mCamera.isMediaRecorderNull()) {
+            // Sample: Register callback to CameraFragment
+            // to acquire the result of Box data writing
+            mCamera.setBoxCallback(mBoxCallBack);
+            notificationSensorStart();  //only for THETA V and THETA Z1
+            if (result = mCamera.takeVideo()) {
+                notificationAudioMovStart();
             }
+            updateUI();
         }
+
+        //stop video recording
+        else {
+            File[] recordFiles = mCamera.getRecordFiles();
+            mRecordMp4File = recordFiles[0];
+            mRecordWavFile = recordFiles[1];
+            if (result = mCamera.takeVideo()) {
+                notificationAudioMovStop();
+            }
+            updateUI();
+        }
+
         return result;
     }
 
@@ -182,24 +228,34 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
          * fileUrls contains full path of mp4 and wav files
          */
         public void onCompleted(String[] fileUrls) {
+
+            //THETA X
+            if (ThetaModel.isXModel()) {
+                String fileUrl = fileUrls[0];
+                notificationDatabaseUpdate(fileUrl);
+            }
+
+            //THETA V and THETA Z1
             /**
              * Sample: If writing of Box data is successful,
              * registration of recorded file to database will be executed
              */
-            Log.d("Sample", "Success in writing metadata");
-            // Delete Wav file if unnecessary
-            mRecordWavFile.delete();
-            notificationSensorStop();
-            /**
-             * The file path specified in "notificationDatabaseUpdate"
-             * specifies the file path or directory path under the DCIM directory.
-             * Replace file path because fileUrls has full path set
-             */
-            String storagePath = Environment.getExternalStorageDirectory().getPath();
-            for(int i = 0; i < fileUrls.length; i++){
-                fileUrls[i] = fileUrls[i].replace(storagePath, "");
+            if (ThetaModel.isVCameraModel()) {
+                Log.d(TAG, "Success in writing metadata");
+                // Delete Wav file if unnecessary
+                mRecordWavFile.delete();
+                notificationSensorStop();
+                /**
+                 * The file path specified in "notificationDatabaseUpdate"
+                 * specifies the file path or directory path under the DCIM directory.
+                 * Replace file path because fileUrls has full path set
+                 */
+                String storagePath = Environment.getExternalStorageDirectory().getPath();
+                for(int i = 0; i < fileUrls.length; i++){
+                    fileUrls[i] = fileUrls[i].replace(storagePath, "");
+                }
+                notificationDatabaseUpdate(fileUrls);
             }
-            notificationDatabaseUpdate(fileUrls);
         }
 
         @Override
@@ -208,17 +264,40 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
              * Sample: If writing of Box data fails,
              * operation will be performed when an error occurs
              */
-            Log.d("Sample", "Failed to write metadata");
-            // Delete file if unnecessary
-            mRecordMp4File.delete();
-            mRecordWavFile.delete();
-            notificationSensorStop();
+            if (ThetaModel.isVCameraModel()) {
+                Log.d(TAG, "Failed to write metadata");
+                // Delete file if unnecessary
+                mRecordMp4File.delete();
+                mRecordWavFile.delete();
+                notificationSensorStop();
+            }
             notificationErrorOccured();
         }
     };
 
-    private void updateLED() {
-        if(ThetaModel.getValue(ThetaInfo.getThetaModelName()) == ThetaModel.THETA_Z1) {
+    private void updateUI() {
+
+        //camera fragment
+        CameraFragment camera = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+
+        //THETA X
+        if (ThetaModel.isXModel()) {
+            ImageView mode_icon = (ImageView) findViewById(R.id.mode_icon);
+            boolean isCapturing = camera.isCapturing();
+            if (mIsVideo) {
+                mode_icon.setImageResource(isCapturing?
+                        R.drawable.u_1_1_25_btn_movie_down:
+                        R.drawable.u_1_1_25_btn_movie);
+            }
+            else {
+                mode_icon.setImageResource(isCapturing?
+                        R.drawable.u_1_1_24_btn_stillcamera_down:
+                        R.drawable.u_1_1_24_btn_stillcamera);
+            }
+        }
+
+        //THETA Z1
+        if (ThetaModel.isZ1Model()) {
             Map<TextArea, String> textMap = new HashMap<>();
             if (mIsVideo) {
                 textMap.put(TextArea.BOTTOM, "video");
@@ -227,11 +306,24 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
             }
             notificationOledTextShow(textMap);
         }
-        else {
+
+        //THETA V
+        if (ThetaModel.isVModel()) {
+            //video mode
             if (mIsVideo) {
                 notificationLedHide(LedTarget.LED4);
                 notificationLedShow(LedTarget.LED5);
-            } else {
+                //start video recording
+                if (camera.isCapturing()) {
+                    notificationLedBlink(LedTarget.LED7, LedColor.RED, 2000);
+                }
+                //stop video recording
+                else {
+                    notificationLedHide(LedTarget.LED7);
+                }
+            }
+            //still mode
+            else {
                 notificationLedHide(LedTarget.LED5);
                 notificationLedShow(LedTarget.LED4);
             }
@@ -240,13 +332,11 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
 
     private void endProcess() {
         if (!mIsEnded) {
-            Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment);
-            if (fragment != null && fragment instanceof CameraFragment) {
-                if (!((CameraFragment) fragment).isMediaRecorderNull()) {
-                    takeVideo(); // stop recording
-                }
-                ((CameraFragment) fragment).close();
+            Log.d(TAG, "endProcess");
+            if (!mCamera.isMediaRecorderNull()) {
+                takeVideo(); // stop recording
             }
+            mCamera.close();
             close();
             mIsEnded = true;
         }
