@@ -56,7 +56,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import static android.security.KeyStore.getApplicationContext;
 
 /**
  * CameraFragment
@@ -667,7 +666,7 @@ public class CameraFragment extends Fragment {
                 mMediaRecorder.newMediaRecorder();
 
                 //Context
-                mMediaRecorder.setMediaRecorderContext(getApplicationContext());
+                mMediaRecorder.setMediaRecorderContext(this.getContext());
                 //Audio Setting
                 mMediaRecorder.setAudioSource(theta360.media.MediaRecorder.AudioSource.DEFAULT);
                 //mMediaRecorder.setMicDeviceId(mMediaRecorder.getExternalDeviceId());

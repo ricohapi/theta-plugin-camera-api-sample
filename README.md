@@ -1,6 +1,6 @@
 # THETA Plug-in: CameraAPI Capture Plugin
 
-Version: 3.0.0
+Version: 3.0.1
 
 This sample plug-in shows the way of capturing image with Camera API for RICOH THETA V/Z1/X.
 
@@ -20,9 +20,9 @@ This sample plug-in has been developed under the following conditions.
 
 #### Camera
 
-* RICOH THETA X (Version 1.10.1)
-* RICOH THETA Z1 (Version 2.10.3)
-* RICOH THETA V (Version 2.40.2 or later)
+* RICOH THETA X  (Version 1.10.1 or later)
+* RICOH THETA Z1 (Version 2.10.3 or later)
+* RICOH THETA V  (Version 2.40.2 or later)
 
 Tips : How to update your RICOH THETA firmware:
 > * [THETA X](https://support.theta360.com/en/manual/x/content/update/update_01.html)
