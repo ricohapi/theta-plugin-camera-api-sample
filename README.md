@@ -1,6 +1,6 @@
 # THETA Plug-in: CameraAPI Capture Plugin
 
-Version: 3.0.1
+Version: 3.1.0
 
 This sample plug-in shows the way of capturing image with Camera API for RICOH THETA V/Z1/X.
 
@@ -29,20 +29,21 @@ Tips : How to update your RICOH THETA firmware:
 > * [THETA Z1](https://support.theta360.com/en/manual/z1/content/update/update_01.html)
 > * [THETA V](https://support.theta360.com/en/manual/v/content/update/update_01.html)
 
-#### Development Software
 
-* Android&trade; Studio 4.2.2
-    * Windows 10 Version 21H1
-    * macOS Monterey Version 12.2
-* gradle 4.2.2
+### Development Environment
+
+* Android Studio Chipmunk | 2021.2.1 Patch 2
+    * Windows 10 Version 21H2
+    * macOS Version 13.2.1 Ventura
+* Gradle Plugin Version 4.2.2
+* Gradle Version 6.8.3
 * Android&trade; SDK (API Level 29)
 * compileSdkVersion 29
 * minSdkVersion 25
 * targetSdkVersion 29
-* [RICOH THETA Plug-in Library](https://github.com/ricohapi/theta-plugin-library) (Version 3.0.4) is being imported.
+* [RICOH THETA Plug-in Library](https://github.com/ricohapi/theta-plugin-library) (Version 3.1.0) is being imported.
 
 <a name="specification"></a>
-
 ## Specification of this plugin
 * This plug-in capture still and video by using [Camera API](https://api.ricoh/docs/theta-plugin-reference/camera-api/), [AudioManager API](https://api.ricoh/docs/theta-plugin-reference/audio-manager-api/) and [PluginLibrary](https://github.com/ricohapi/theta-plugin-sdk/tree/master/pluginlibrary).
 * After capturing still or video, the JPEG or MP4(+WAV) file is stored as,
@@ -56,7 +57,6 @@ Tips : How to update your RICOH THETA firmware:
     * The metadata of the files (.mp4 and .jpg) which outputted by using CameraAPI will be missed than the case of using WebAPI. (We recommend to use WebAPI instead of CameraAPI.)
 
 <a name="started"></a>
-
 ## Getting Started
 
 ### THETA X
@@ -76,7 +76,7 @@ Tips : How to update your RICOH THETA firmware:
         ```gradle
         dependencies {
             ...
-            implementation 'com.theta360:pluginlibrary:3.0.4'
+            implementation 'com.theta360:pluginlibrary:3.1.0'
             ...
         }
         ```
