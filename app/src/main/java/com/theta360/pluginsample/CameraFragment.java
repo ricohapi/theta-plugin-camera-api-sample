@@ -642,6 +642,9 @@ public class CameraFragment extends Fragment {
             mParameters.set("RIC_WB_MODE", "RicWbAuto");
             mParameters.set("RIC_WB_TEMPERATURE", 2500);
             mParameters.set("RIC_PROC_STITCHING", "RicDynamicStitchingAuto");
+            if (ThetaModel.isXModel()) {
+                mParameters.set("RIC_WATER_HOUSING", 0);
+            }
             mParameters.set("RIC_PROC_ZENITH_CORRECTION", "RicZenithCorrectionOnAuto");
             if (ThetaModel.isZ1Model()) {
                 mParameters.set("RIC_DNG_OUTPUT_ENABLED", 1); //DNG output is enabled only on Z1
@@ -701,6 +704,7 @@ public class CameraFragment extends Fragment {
                 // Sample:Set up 4K Equi videos
                 mParameters.set("RIC_SHOOTING_MODE", "RicMovieRecording3840");
                 mParameters.set("RIC_PROC_STITCHING", "RicDynamicStitchingAuto");
+                mParameters.set("RIC_WATER_HOUSING", 0);
                 mParameters.set("RIC_PROC_ZENITH_CORRECTION", "RicZenithCorrectionOnAuto");
                 mParameters.set("RIC_EXPOSURE_MODE", "RicAutoExposureP");
                 mParameters.setPreviewFrameRate(30);
