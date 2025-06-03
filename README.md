@@ -4,6 +4,9 @@ Version: 3.1.2
 
 This sample plug-in shows the way of capturing image with Camera API for RICOH THETA V/Z1/X.
 
+> [!NOTE]  
+> If you have any questions or encounter any issues, please visit [Discussions](https://github.com/ricohapi/awesome-theta/discussions?discussions_q=) and create a new discussion thread.
+
 ## Contents
 
 * [Development Environment](#requirements)
