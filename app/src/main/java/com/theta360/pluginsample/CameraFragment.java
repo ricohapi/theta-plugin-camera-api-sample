@@ -22,12 +22,14 @@ import android.media.AudioManager;
 import android.media.CamcorderProfile;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
 
 import com.theta360.pluginlibrary.activity.ThetaInfo;
 import com.theta360.pluginlibrary.exif.Box;
@@ -93,6 +95,7 @@ public class CameraFragment extends Fragment {
     private String mPath = "";
     private String mFilepath = "";
 
+    private View mView;
     public boolean isMediaRecorderNull() {
         return mMediaRecorder == null;
     }
@@ -169,7 +172,8 @@ public class CameraFragment extends Fragment {
             mCamera = factory.abstractCamera(FactoryBase.CameraModel.VCamera);
         }
 
-        return inflater.inflate(R.layout.fragment_main, container, false);
+        mView = inflater.inflate(R.layout.fragment_main, container, false);
+        return mView;
     }
 
     @Override
@@ -665,6 +669,18 @@ public class CameraFragment extends Fragment {
         if (ThetaModel.isXModel()) {
             //start video recording
             if (mMediaRecorder == null) {
+                // Sample:Set up 4K Equi videos
+                mParameters.set("RIC_SHOOTING_MODE", "RicMovieRecording3840");
+                mParameters.set("RIC_PROC_STITCHING", "RicDynamicStitchingAuto");
+                mParameters.set("RIC_WATER_HOUSING", 0);
+                mParameters.set("RIC_PROC_ZENITH_CORRECTION", "RicZenithCorrectionOnAuto");
+                mParameters.set("RIC_EXPOSURE_MODE", "RicAutoExposureP");
+                mParameters.setPreviewFrameRate(30);
+                mCamera.setParameters();
+
+                CameraSettings.setCameraParameters(mParameters);
+                CameraSettings.setSphereType(SphereType.EQUIRECTANGULAR);
+
                 mMediaRecorder = factory.abstractMediaRecorder(FactoryBase.CameraModel.XCamera);
                 mMediaRecorder.newMediaRecorder();
 
@@ -700,18 +716,6 @@ public class CameraFragment extends Fragment {
                 mFilepath = mPath + "VD" + (new SimpleDateFormat("HHmmss")).format(new Date()) + ".MP4";
                 Log.i(TAG, "MP4 file path = " + mFilepath);
                 mMediaRecorder.setOutputFile(mFilepath);
-
-                // Sample:Set up 4K Equi videos
-                mParameters.set("RIC_SHOOTING_MODE", "RicMovieRecording3840");
-                mParameters.set("RIC_PROC_STITCHING", "RicDynamicStitchingAuto");
-                mParameters.set("RIC_WATER_HOUSING", 0);
-                mParameters.set("RIC_PROC_ZENITH_CORRECTION", "RicZenithCorrectionOnAuto");
-                mParameters.set("RIC_EXPOSURE_MODE", "RicAutoExposureP");
-                mParameters.setPreviewFrameRate(30);
-                mCamera.setParameters();
-
-                CameraSettings.setCameraParameters(mParameters);
-                CameraSettings.setSphereType(SphereType.EQUIRECTANGULAR);
 
                 //mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
                 mMediaRecorder.setOnErrorListener(onErrorListener);
@@ -907,5 +911,21 @@ public class CameraFragment extends Fragment {
             return result;
         }
         return result;
+    }
+
+    public void updateUI(boolean isVideo) {
+        ImageView mode_icon = mView.findViewById(R.id.mode_icon);
+        Log.d(TAG,"mIsVideo:"+isVideo+" mIsCapturing:"+mIsCapturing);
+        //boolean isCapturing = camera.isCapturing();
+        if (isVideo) {
+            mode_icon.setImageResource(mIsCapturing?
+                    R.drawable.u_1_1_25_btn_movie_down:
+                    R.drawable.u_1_1_25_btn_movie);
+        }
+        else {
+            mode_icon.setImageResource(mIsCapturing?
+                    R.drawable.u_1_1_24_btn_stillcamera_down:
+                    R.drawable.u_1_1_24_btn_stillcamera);
+        }
     }
 }
