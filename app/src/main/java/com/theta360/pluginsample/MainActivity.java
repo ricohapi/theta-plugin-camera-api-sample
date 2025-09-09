@@ -282,18 +282,7 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
 
         //THETA X
         if (ThetaModel.isXModel()) {
-            ImageView mode_icon = (ImageView) findViewById(R.id.mode_icon);
-            boolean isCapturing = camera.isCapturing();
-            if (mIsVideo) {
-                mode_icon.setImageResource(isCapturing?
-                        R.drawable.u_1_1_25_btn_movie_down:
-                        R.drawable.u_1_1_25_btn_movie);
-            }
-            else {
-                mode_icon.setImageResource(isCapturing?
-                        R.drawable.u_1_1_24_btn_stillcamera_down:
-                        R.drawable.u_1_1_24_btn_stillcamera);
-            }
+            camera.updateUI(mIsVideo);
         }
 
         //THETA Z1

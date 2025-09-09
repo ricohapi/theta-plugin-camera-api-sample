@@ -1,8 +1,8 @@
-# THETA Plug-in: CameraAPI Capture Plugin
+# THETA Plugin: CameraAPI Capture Plugin
 
-Version: 3.1.2
+Version: 3.2.0
 
-This sample plug-in shows the way of capturing image with Camera API for RICOH THETA V/Z1/X.
+This sample plugin shows the way of capturing image with Camera API for RICOH THETA V/Z1/X.
 
 > [!NOTE]  
 > If you have any questions or encounter any issues, please visit [Discussions](https://github.com/ricohapi/awesome-theta/discussions?discussions_q=) and create a new discussion thread.
@@ -35,16 +35,12 @@ Tips : How to update your RICOH THETA firmware:
 
 ### Development Environment
 
-* Android Studio Chipmunk | 2021.2.1 Patch 2
-    * Windows 10 Version 21H2
-    * macOS Version 13.2.1 Ventura
-* Gradle Plugin Version 4.2.2
-* Gradle Version 6.8.3
-* Android&trade; SDK (API Level 29)
-* compileSdkVersion 29
-* minSdkVersion 25
-* targetSdkVersion 29
-* [RICOH THETA Plug-in Library](https://github.com/ricohapi/theta-plugin-library) (Version 3.3.0) is being imported.
+* Android Studio Narwhal Feature Drop | 2025.1.2 Patch 1
+    * Windows 11 Version 23H2
+    * macOS Version 15.6.1 Sequoia
+* Gradle Plugin Version 8.7.3
+* Gradle Version 8.9
+* [RICOH THETA Plug-in Library](https://github.com/ricohapi/theta-plugin-library) (Version 4.0.0) is being imported.
 
 <a name="specification"></a>
 ## Specification of this plugin
@@ -79,7 +75,7 @@ Tips : How to update your RICOH THETA firmware:
         ```gradle
         dependencies {
             ...
-            implementation 'com.theta360:pluginlibrary:3.3.0'
+            implementation 'com.theta360:pluginlibrary:4.0.0'
             ...
         }
         ```
